@@ -38,6 +38,13 @@ class ContextTest(unittest.TestCase):
         with context.build(Class) as instance:
             self.assertEqual("abcxyz", instance.text)
 
+    def test_add_none_context(self):
+        context = Context({"value": "abc"}, None)
+        context.add(None)
+
+        with context.build("value") as value:
+            self.assertEqual("abc", value)
+
     @skipIf(sys.version_info < (3, 7), "@dataclass needs at least Python 3.7")
     def test_dataclass_decorator(self):
         exec(textwrap.dedent("""
