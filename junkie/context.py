@@ -19,18 +19,18 @@ class Context(CoreContext):
                     self._singletons[key] = value
 
     @contextmanager
-    def build(self, instances: Union[Set[str], List[str], type, str]):
-        if isinstance(instances, set) or isinstance(instances, list):
-            with self.build_dict(instances) as instance_dict:
+    def build(self, names_or_type: Union[Set[str], List[str], str, type]):
+        if isinstance(names_or_type, (set, list)):
+            with self.build_dict(names_or_type) as instance_dict:
                 yield instance_dict
 
-        elif isinstance(instances, str):
-            with self.build_object_by_name(instances) as instance_object:
+        elif isinstance(names_or_type, str):
+            with self.build_object_by_name(names_or_type) as instance_object:
                 yield instance_object
 
-        elif isinstance(instances, type):
-            with self.build_object_by_type(instances) as instance_object:
+        elif isinstance(names_or_type, type):
+            with self.build_object_by_type(names_or_type) as instance_object:
                 yield instance_object
 
         else:
-            raise Exception("Type not known (set, list, str or type/class expected): {}".format(type(instances)))
+            raise Exception("Type not known (set, list, str or type/class expected): {}".format(type(names_or_type)))
