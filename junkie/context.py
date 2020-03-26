@@ -5,14 +5,14 @@ from junkie.core_context import CoreContext
 
 
 class Context(CoreContext):
-    def __init__(self, *singletons_and_factories: Union[Dict[str, object], Dict[str, Callable]]):
+    def __init__(self, *singletons_and_factories_args: Union[Dict[str, object], Dict[str, Callable]]):
         super().__init__()
 
-        self.add(*singletons_and_factories)
+        self.add(*singletons_and_factories_args)
 
-    def add(self, *singletons_and_factories: Union[Dict[str, object], Dict[str, Callable]]):
-        for singletons_and_factories_element in singletons_and_factories:
-            for key, value in singletons_and_factories_element.items():
+    def add(self, *singletons_and_factories_args: Union[Dict[str, object], Dict[str, Callable]]):
+        for singletons_and_factories in singletons_and_factories_args:
+            for key, value in singletons_and_factories.items():
                 if callable(value):
                     self._factories[key] = value
                 else:
