@@ -8,9 +8,9 @@ from junkie.core_context import CoreContext
 
 
 class CoreContextTest(unittest.TestCase):
-    def test_simple_singleton(self):
+    def test_simple_instance(self):
         context = CoreContext()
-        context.add_singletons({"text": "abc"})
+        context.add_instances({"text": "abc"})
 
         with context.build_dict({"text"}) as instances:
             self.assertEqual({"text": "abc"}, instances)
@@ -24,7 +24,7 @@ class CoreContextTest(unittest.TestCase):
 
     def test_factory_using_other_factory(self):
         context = CoreContext()
-        context.add_singletons({"prefix": "abc", "suffix": "def"})
+        context.add_instances({"prefix": "abc", "suffix": "def"})
         context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
 
         with context.build_dict({"text", "prefix"}) as instances:
@@ -41,7 +41,7 @@ class CoreContextTest(unittest.TestCase):
         test_logger = []
         context = CoreContext()
         context.add_factories({"a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e")})
-        context.add_singletons({"logger": test_logger})
+        context.add_instances({"logger": test_logger})
 
         names = ["a", "b", "c", "d", "e"]
         random.shuffle(names)
@@ -55,7 +55,7 @@ class CoreContextTest(unittest.TestCase):
                 self.text = prefix + suffix
 
         context = CoreContext()
-        context.add_singletons({"prefix": "abc", "suffix": "def"})
+        context.add_instances({"prefix": "abc", "suffix": "def"})
 
         with context.build_object_by_type(Class) as instance:
             self.assertEqual("abcdef", instance.text)
@@ -66,7 +66,7 @@ class CoreContextTest(unittest.TestCase):
                 self.text = prefix + suffix
 
         context = CoreContext()
-        context.add_singletons({"prefix": "abc", "suffix": "def"})
+        context.add_instances({"prefix": "abc", "suffix": "def"})
         context.add_factories({"text": Class})
 
         with context.build_object_by_name("text")as instance:
@@ -97,7 +97,7 @@ class CoreContextTest(unittest.TestCase):
 
         test_logger = list()
         context = CoreContext()
-        context.add_singletons({"logger": test_logger})
+        context.add_instances({"logger": test_logger})
         context.add_factories({"message_service": MessageService, "database_context": create_database})
 
         with context.build_object_by_type(Class) as instance:
@@ -126,7 +126,7 @@ class CoreContextTest(unittest.TestCase):
             yield "message-service"
 
         context = CoreContext()
-        context.add_singletons({"text": "abc"})
+        context.add_instances({"text": "abc"})
         context.add_factories({
             "connection_string": lambda: "URL",
             "database_context": create_database,

@@ -10,11 +10,11 @@ class CoreContext:
     def __init__(self):
         self.logger = logging.getLogger(junkie.__name__)
 
-        self._singletons = {}
+        self._instances = {}
         self._factories = {}
 
-    def add_singletons(self, singletons: Dict[str, object]):
-        self._singletons.update(singletons)
+    def add_instances(self, instances: Dict[str, object]):
+        self._instances.update(instances)
 
     def add_factories(self, factories: Dict[str, Callable]):
         self._factories.update(factories)
@@ -39,8 +39,8 @@ class CoreContext:
             yield self._build_object_by_name(name, stack)
 
     def _build_object_by_name(self, name: str, stack: ExitStack):
-        if name in self._singletons:
-            return self._singletons[name]
+        if name in self._instances:
+            return self._instances[name]
 
         if name in self._factories:
             return self._call(self._factories[name], stack, name)
@@ -59,8 +59,8 @@ class CoreContext:
         arg_names = []
 
         for name, annotation in inspect.signature(factory_func).parameters.items():
-            if name in self._singletons:
-                arg = self._singletons[name]
+            if name in self._instances:
+                arg = self._instances[name]
 
             elif name in self._factories:
                 arg = self._call(self._factories[name], stack, name)
