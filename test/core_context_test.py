@@ -87,6 +87,36 @@ class CoreContextTest(unittest.TestCase):
 
             self.assertNotEqual(instance1, instance2)
 
+    def test_default_argument_usage(self):
+        class MyClassWithDefaultArguments:
+            def __init__(self, argument: str, default_argument: int = 10, default_argument2: str = None):
+                self.argument = argument
+                self.default_argument = default_argument
+                self.default_argument2 = default_argument2 or "Hello"
+
+        core_context = CoreContext()
+        core_context.add_instances({"argument": "value"})
+
+        with core_context.build_instance_by_type(MyClassWithDefaultArguments) as instance:
+            self.assertEqual("value", instance.argument)
+            self.assertEqual(10, instance.default_argument)
+            self.assertEqual("Hello", instance.default_argument2)
+
+    def test_partial_default_arguments_usage(self):
+        class MyClassWithDefaultArguments:
+            def __init__(self, argument: str, default_argument: int = 10, default_argument2: str = None):
+                self.argument = argument
+                self.default_argument = default_argument
+                self.default_argument2 = default_argument2 or "Hello"
+
+        core_context = CoreContext()
+        core_context.add_instances({"argument": "value", "default_argument2": "set from context"})
+
+        with core_context.build_instance_by_type(MyClassWithDefaultArguments) as instance:
+            self.assertEqual("value", instance.argument)
+            self.assertEqual(10, instance.default_argument)
+            self.assertEqual("set from context", instance.default_argument2)
+
     def test_context_manager_enter_and_exit(self):
         class Class:
             def __init__(self, message_service, database_context):
