@@ -25,12 +25,12 @@ class Context(CoreContext):
                 yield instance_dict
 
         elif isinstance(names_or_type, str):
-            with self.build_object_by_name(names_or_type) as instance_object:
-                yield instance_object
+            with self.build_instance_by_name(names_or_type) as instance:
+                yield instance
 
         elif isinstance(names_or_type, type):
-            with self.build_object_by_type(names_or_type) as instance_object:
-                yield instance_object
+            with self.build_instance_by_type(names_or_type) as instance:
+                yield instance
 
         else:
             raise Exception("Type not known (set, list, str or type/class expected): {}".format(type(names_or_type)))

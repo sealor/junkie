@@ -27,18 +27,18 @@ class CoreContext:
             instance_dict = {}
 
             for name in names:
-                instance_dict[name] = self._build_object_by_name(name, stack)
+                instance_dict[name] = self._build_instance_by_name(name, stack)
 
             yield instance_dict
 
     @contextmanager
-    def build_object_by_name(self, name: str) -> object:
+    def build_instance_by_name(self, name: str) -> object:
         self.logger.debug("build('%s')", name)
 
         with ExitStack() as stack:
-            yield self._build_object_by_name(name, stack)
+            yield self._build_instance_by_name(name, stack)
 
-    def _build_object_by_name(self, name: str, stack: ExitStack):
+    def _build_instance_by_name(self, name: str, stack: ExitStack):
         if name in self._instances:
             return self._instances[name]
 
@@ -48,7 +48,7 @@ class CoreContext:
         raise Exception("Not found: {}".format(name))
 
     @contextmanager
-    def build_object_by_type(self, constructor: type) -> object:
+    def build_instance_by_type(self, constructor: type) -> object:
         self.logger.debug("build(%s)", constructor.__name__)
 
         with ExitStack() as stack:
