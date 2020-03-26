@@ -55,7 +55,7 @@ class CoreContext:
             yield self._call(constructor, stack, constructor.__name__)
 
     def _call(self, factory_func: Callable, stack: ExitStack, instance_name: str):
-        args = []
+        arg_instances = []
         arg_names = []
 
         for name, annotation in inspect.signature(factory_func).parameters.items():
@@ -68,11 +68,11 @@ class CoreContext:
             else:
                 raise Exception("Not found: " + name)
 
-            args.append(arg)
+            arg_instances.append(arg)
             arg_names.append(name)
 
         self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, arg_names)
-        instance = factory_func(*args)
+        instance = factory_func(*arg_instances)
 
         if hasattr(instance, "__enter__"):
             self.logger.debug("%s.__enter__()", instance_name)
