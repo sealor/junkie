@@ -125,6 +125,9 @@ class CoreContext:
         self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(args.keys()))
         instance = factory_func(**args)
 
+        if hasattr(factory_func, "__junkie_cached__"):
+            self._instances[instance_name] = instance
+
         if hasattr(instance, "__enter__"):
             self.logger.debug("%s.__enter__()", instance_name)
             stack.push(lambda *exception_details: self.logger.debug("%s.__exit__()", instance_name))
