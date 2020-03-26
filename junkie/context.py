@@ -11,8 +11,8 @@ class Context(CoreContext):
         self.add(*singletons_and_factories)
 
     def add(self, *singletons_and_factories: Union[Dict[str, object], Dict[str, Callable]]):
-        for singletons_and_factories in singletons_and_factories:
-            for key, value in singletons_and_factories.items():
+        for singletons_and_factories_element in singletons_and_factories:
+            for key, value in singletons_and_factories_element.items():
                 if callable(value):
                     self._factories[key] = value
                 else:
