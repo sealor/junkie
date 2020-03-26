@@ -7,6 +7,10 @@ from typing import Union, Dict, Callable, Tuple, overload
 import junkie
 
 
+class MissingDependencyError(RuntimeError):
+    pass
+
+
 class CoreContext:
     def __init__(self):
         self.logger = logging.getLogger(junkie.__name__)
@@ -148,6 +152,8 @@ class CoreContext:
                 argument_dict[name] = annotation.default
 
             else:
-                raise Exception("Not found: " + name)
+                raise MissingDependencyError(
+                    "Unable to find dependency '{}' for factory function '{}'".format(name, factory_func)
+                )
 
         return argument_dict, args, kwargs

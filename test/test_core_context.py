@@ -4,6 +4,7 @@ import unittest
 from contextlib import contextmanager
 
 import junkie
+from junkie import MissingDependencyError
 from junkie.core_context import CoreContext
 
 
@@ -243,3 +244,26 @@ class CoreContextTest(unittest.TestCase):
             "DEBUG:{}:message_service.__exit__()".format(junkie.__name__),
             "DEBUG:{}:database_context.__exit__()".format(junkie.__name__),
         ], logging_context.output)
+
+    def test_raise_MissingDependencyError_by_name(self):
+        core_context = CoreContext()
+        core_context.add_factories({
+            "foo": lambda bar: bar
+        })
+
+        with self.assertRaises(MissingDependencyError) as exception:
+            with core_context.build_element("foo"):
+                pass
+
+        self.assertRegex(str(exception.exception), "Unable to find dependency 'bar' for factory function '.*lambda.*'")
+
+    def test_raise_MissingDependencyError_by_type(self):
+        class App:
+            def __init__(self, argument: str):
+                self.argument = argument
+
+        with self.assertRaises(MissingDependencyError) as exception:
+            with CoreContext().build_element(App):
+                pass
+
+        self.assertRegex(str(exception.exception), "Unable to find dependency 'argument' for factory function '.*App'")
