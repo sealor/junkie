@@ -1,5 +1,6 @@
 import inspect
 import logging
+from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
 from typing import Union, Set, List, Dict, Callable, Tuple
 
@@ -68,8 +69,7 @@ class CoreContext:
             yield self._call(constructor, stack, constructor.__name__)
 
     def _call(self, factory_func: Callable, stack: ExitStack, instance_name: str):
-        arg_instances = []
-        arg_names = []
+        args = OrderedDict()
 
         for name, annotation in inspect.signature(factory_func).parameters.items():
             if name in self._instances:
@@ -78,14 +78,16 @@ class CoreContext:
             elif name in self._factories:
                 arg = self._call(self._factories[name], stack, name)
 
+            elif annotation.default is not inspect.Parameter.empty:
+                continue
+
             else:
                 raise Exception("Not found: " + name)
 
-            arg_instances.append(arg)
-            arg_names.append(name)
+            args[name] = arg
 
-        self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, arg_names)
-        instance = factory_func(*arg_instances)
+        self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(args.keys()))
+        instance = factory_func(**args)
 
         if hasattr(instance, "__enter__"):
             self.logger.debug("%s.__enter__()", instance_name)
