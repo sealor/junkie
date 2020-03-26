@@ -16,10 +16,10 @@ class ContextTest(unittest.TestCase):
             "suffix": "def",
             "text": lambda prefix, suffix: prefix + suffix
         })
-        context.add({
-            "class": Class,
-            "suffix": "xyz"
-        })
+        context.add(
+            {"class": Class},
+            {"suffix": "xyz"}
+        )
 
         with context.build({"text", "prefix"}) as instance:
             self.assertEqual({"text": "abcxyz", "prefix": "abc"}, instance)
