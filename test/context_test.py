@@ -39,8 +39,9 @@ class ContextTest(unittest.TestCase):
 
         @dataclass
         class Class:
-            prefix: str
-            suffix: str
+            prefix: str  # noqa: E999
+            suffix: str  # noqa: E999
+            pass
 
             def __post_init__(self):
                 self.text = self.prefix + self.suffix

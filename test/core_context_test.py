@@ -139,14 +139,14 @@ class CoreContextTest(unittest.TestCase):
                 logging.getLogger(__name__).info("execute context block")
 
         self.assertEqual([
-            f"DEBUG:{junkie.__name__}:build(Class)",
-            f"DEBUG:{junkie.__name__}:connection_string = <lambda>([])",
-            f"DEBUG:{junkie.__name__}:database_context = create_database(['connection_string'])",
-            f"DEBUG:{junkie.__name__}:database_context.__enter__()",
-            f"DEBUG:{junkie.__name__}:message_service = create_message_service([])",
-            f"DEBUG:{junkie.__name__}:message_service.__enter__()",
-            f"DEBUG:{junkie.__name__}:Class = Class(['database_context', 'message_service', 'text'])",
-            f"INFO:{__name__}:execute context block",
-            f"DEBUG:{junkie.__name__}:message_service.__exit__()",
-            f"DEBUG:{junkie.__name__}:database_context.__exit__()",
+            "DEBUG:{}:build(Class)".format(junkie.__name__),
+            "DEBUG:{}:connection_string = <lambda>([])".format(junkie.__name__),
+            "DEBUG:{}:database_context = create_database(['connection_string'])".format(junkie.__name__),
+            "DEBUG:{}:database_context.__enter__()".format(junkie.__name__),
+            "DEBUG:{}:message_service = create_message_service([])".format(junkie.__name__),
+            "DEBUG:{}:message_service.__enter__()".format(junkie.__name__),
+            "DEBUG:{}:Class = Class(['database_context', 'message_service', 'text'])".format(junkie.__name__),
+            "INFO:{}:execute context block".format(__name__),
+            "DEBUG:{}:message_service.__exit__()".format(junkie.__name__),
+            "DEBUG:{}:database_context.__exit__()".format(junkie.__name__),
         ], logging_context.output)
