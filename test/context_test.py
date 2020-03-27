@@ -37,7 +37,7 @@ class ContextTest(unittest.TestCase):
         with context.build(Class) as instance:
             self.assertEqual("abcxyz", instance.text)
 
-    @skipIf(sys.version_info.major <= 3 and sys.version_info.minor < 7, "@dataclass is new in version 3.7")
+    @skipIf(sys.version_info < (3, 7), "@dataclass needs at least Python 3.7")
     def test_dataclass_decorator(self):
         from dataclasses import dataclass
 
