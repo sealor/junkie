@@ -36,9 +36,6 @@ class ContextTest(unittest.TestCase):
 
     @skipIf(sys.version_info < (3, 7), "@dataclass needs at least Python 3.7")
     def test_dataclass_decorator(self):
-        class Class:
-            pass
-
         exec(textwrap.dedent("""
             from dataclasses import dataclass
 
@@ -50,7 +47,7 @@ class ContextTest(unittest.TestCase):
     
                 def __post_init__(self):
                     self.text = self.prefix + self.suffix
-        """), globals())
 
-        with Context({"prefix": "abc", "suffix": "def"}).build(Class) as instance:
-            self.assertEqual("abcdef", instance.text)
+            with Context({"prefix": "abc", "suffix": "def"}).build(Class) as instance:
+                self.assertEqual("abcdef", instance.text)
+        """))
