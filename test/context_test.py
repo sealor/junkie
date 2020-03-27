@@ -27,6 +27,10 @@ class ContextTest(unittest.TestCase):
         with context.build(["text", "prefix"]) as instance:
             self.assertEqual({"text": "abcxyz", "prefix": "abc"}, instance)
 
+        with context.build(("text", "prefix")) as (text, prefix):
+            self.assertEqual("abcxyz", text)
+            self.assertEqual("abc", prefix)
+
         with context.build("class") as instance:
             self.assertEqual("abcxyz", instance.text)
 
