@@ -1,4 +1,5 @@
 import sys
+import textwrap
 import unittest
 from unittest import skipIf
 
@@ -39,15 +40,18 @@ class ContextTest(unittest.TestCase):
 
     @skipIf(sys.version_info < (3, 7), "@dataclass needs at least Python 3.7")
     def test_dataclass_decorator(self):
-        from dataclasses import dataclass
+        exec(textwrap.dedent("""
+            from dataclasses import dataclass
 
-        @dataclass
-        class Class:
-            prefix: str
-            suffix: str
+            @dataclass
+            class Class:
+                prefix: str
+                suffix: str
+                pass
+    
+                def __post_init__(self):
+                    self.text = self.prefix + self.suffix
 
-            def __post_init__(self):
-                self.text = self.prefix + self.suffix
-
-        with Context({"prefix": "abc", "suffix": "def"}).build(Class) as instance:
-            self.assertEqual("abcdef", instance.text)
+            with Context({"prefix": "abc", "suffix": "def"}).build(Class) as instance:
+                self.assertEqual("abcdef", instance.text)
+        """))
