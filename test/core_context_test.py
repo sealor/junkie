@@ -8,9 +8,9 @@ from junkie.core_context import CoreContext
 
 
 class CoreContextTest(unittest.TestCase):
-    def test_simple_singleton(self):
+    def test_simple_instance(self):
         context = CoreContext()
-        context.add_singletons({"text": "abc"})
+        context.add_instances({"text": "abc"})
 
         with context.build_dict({"text"}) as instances:
             self.assertEqual({"text": "abc"}, instances)
@@ -24,13 +24,13 @@ class CoreContextTest(unittest.TestCase):
 
     def test_factory_using_other_factory(self):
         context = CoreContext()
-        context.add_singletons({"prefix": "abc", "suffix": "def"})
+        context.add_instances({"prefix": "abc", "suffix": "def"})
         context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
 
         with context.build_dict({"text", "prefix"}) as instances:
             self.assertEqual({"text": "abcdef", "prefix": "abc"}, instances)
 
-    def test_build_object_by_dict_with_list_in_right_order(self):
+    def test_build_instance_by_dict_with_list_in_right_order(self):
         def func(letter):
             def factory_func(logger):
                 logger.append(letter)
@@ -41,7 +41,7 @@ class CoreContextTest(unittest.TestCase):
         test_logger = []
         context = CoreContext()
         context.add_factories({"a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e")})
-        context.add_singletons({"logger": test_logger})
+        context.add_instances({"logger": test_logger})
 
         names = ["a", "b", "c", "d", "e"]
         random.shuffle(names)
@@ -49,27 +49,27 @@ class CoreContextTest(unittest.TestCase):
         with context.build_dict(names):
             self.assertEqual(names, test_logger)
 
-    def test_build_object_by_type(self):
+    def test_build_instance_by_type(self):
         class Class:
             def __init__(self, prefix, suffix):
                 self.text = prefix + suffix
 
         context = CoreContext()
-        context.add_singletons({"prefix": "abc", "suffix": "def"})
+        context.add_instances({"prefix": "abc", "suffix": "def"})
 
-        with context.build_object_by_type(Class) as instance:
+        with context.build_instance_by_type(Class) as instance:
             self.assertEqual("abcdef", instance.text)
 
-    def test_build_object_by_name(self):
+    def test_build_instance_by_name(self):
         class Class:
             def __init__(self, prefix, suffix):
                 self.text = prefix + suffix
 
         context = CoreContext()
-        context.add_singletons({"prefix": "abc", "suffix": "def"})
+        context.add_instances({"prefix": "abc", "suffix": "def"})
         context.add_factories({"text": Class})
 
-        with context.build_object_by_name("text")as instance:
+        with context.build_instance_by_name("text") as instance:
             self.assertEqual("abcdef", instance.text)
 
     def test_context_manager_enter_and_exit(self):
@@ -97,10 +97,10 @@ class CoreContextTest(unittest.TestCase):
 
         test_logger = list()
         context = CoreContext()
-        context.add_singletons({"logger": test_logger})
+        context.add_instances({"logger": test_logger})
         context.add_factories({"message_service": MessageService, "database_context": create_database})
 
-        with context.build_object_by_type(Class) as instance:
+        with context.build_instance_by_type(Class) as instance:
             self.assertEqual(MessageService, type(instance.message_service))
             self.assertEqual("DB", instance.database_context)
 
@@ -126,7 +126,7 @@ class CoreContextTest(unittest.TestCase):
             yield "message-service"
 
         context = CoreContext()
-        context.add_singletons({"text": "abc"})
+        context.add_instances({"text": "abc"})
         context.add_factories({
             "connection_string": lambda: "URL",
             "database_context": create_database,
@@ -135,7 +135,7 @@ class CoreContextTest(unittest.TestCase):
         })
 
         with self.assertLogs(level="DEBUG") as logging_context:
-            with context.build_object_by_type(Class):
+            with context.build_instance_by_type(Class):
                 logging.getLogger(__name__).info("execute context block")
 
         self.assertEqual([
