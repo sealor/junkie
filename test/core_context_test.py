@@ -72,6 +72,21 @@ class CoreContextTest(unittest.TestCase):
         with context.build_instance_by_name("text") as instance:
             self.assertEqual("abcdef", instance.text)
 
+    def test_build_object_by_names(self):
+        class Class:
+            def __init__(self, prefix, suffix):
+                self.text = prefix + suffix
+
+        context = CoreContext()
+        context.add_instances({"prefix": "abc", "suffix": "def"})
+        context.add_factories({"text": Class})
+
+        with context.build_instance_by_names(("text", "text")) as (instance1, instance2):
+            self.assertEqual("abcdef", instance1.text)
+            self.assertEqual("abcdef", instance2.text)
+
+            self.assertNotEqual(instance1, instance2)
+
     def test_context_manager_enter_and_exit(self):
         class Class:
             def __init__(self, message_service, database_context):
