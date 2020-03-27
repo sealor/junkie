@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Union, Dict, Callable, Set, List
+from typing import Union, Dict, Callable, Set, List, Tuple
 
 from junkie.core_context import CoreContext
 
@@ -19,10 +19,14 @@ class Context(CoreContext):
                     self._instances[key] = value
 
     @contextmanager
-    def build(self, names_or_type: Union[Set[str], List[str], str, type]):
+    def build(self, names_or_type: Union[Set[str], List[str], Tuple[str, ...], str, type]):
         if isinstance(names_or_type, (set, list)):
             with self.build_dict(names_or_type) as instance_dict:
                 yield instance_dict
+
+        elif isinstance(names_or_type, tuple):
+            with self.build_instance_by_names(names_or_type) as instance:
+                yield instance
 
         elif isinstance(names_or_type, str):
             with self.build_instance_by_name(names_or_type) as instance:

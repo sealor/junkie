@@ -1,7 +1,7 @@
 import inspect
 import logging
 from contextlib import contextmanager, ExitStack
-from typing import Union, Set, List, Dict, Callable
+from typing import Union, Set, List, Dict, Callable, Tuple
 
 import junkie
 
@@ -30,6 +30,19 @@ class CoreContext:
                 instance_dict[name] = self._build_instance_by_name(name, stack)
 
             yield instance_dict
+
+    @contextmanager
+    def build_instance_by_names(self, names: Tuple[str, ...]) -> Tuple[object]:
+        self.logger.debug("build(%s)", names)
+
+        with ExitStack() as stack:
+            instances = []
+
+            for name in names:
+                instance = self._build_instance_by_name(name, stack)
+                instances.append(instance)
+
+            yield tuple(instances)
 
     @contextmanager
     def build_instance_by_name(self, name: str) -> object:
