@@ -72,7 +72,7 @@ class CoreContextTest(unittest.TestCase):
         with context.build_instance_by_name("text") as instance:
             self.assertEqual("abcdef", instance.text)
 
-    def test_build_object_by_names(self):
+    def test_build_instance_by_names(self):
         class Class:
             def __init__(self, prefix, suffix):
                 self.text = prefix + suffix
