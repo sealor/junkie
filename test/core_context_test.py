@@ -4,6 +4,7 @@ import unittest
 from contextlib import contextmanager
 
 import junkie
+from junkie import CanNotBeCachedException
 from junkie.core_context import CoreContext
 
 
@@ -195,3 +196,35 @@ class CoreContextTest(unittest.TestCase):
             "DEBUG:{}:message_service.__exit__()".format(junkie.__name__),
             "DEBUG:{}:database_context.__exit__()".format(junkie.__name__),
         ], logging_context.output)
+
+    def test_cached_factory_class(self):
+        class MyClass:
+            pass
+
+        core_context = CoreContext()
+        core_context.add_factories({
+            "cached": junkie.cached(MyClass)
+        })
+
+        with core_context.build_instance_by_name("cached") as my_class1:
+            with core_context.build_instance_by_name("cached") as my_class2:
+                self.assertIs(my_class1, my_class2)
+
+    def test_cached_lambda(self):
+        core_context = CoreContext()
+
+        core_context.add_factories({
+            "cached": junkie.cached(lambda: "wuff")
+        })
+
+        with core_context.build_instance_by_name("cached") as lambda_result1:
+            with core_context.build_instance_by_name("cached") as lambda_result2:
+                self.assertIs(lambda_result1, lambda_result2)
+
+    def test_can_not_cached_exception(self):
+        core_context = CoreContext()
+
+        with self.assertRaises(CanNotBeCachedException):
+            core_context.add_instances({
+                "cached_instance": junkie.cached("wuff")
+            })
