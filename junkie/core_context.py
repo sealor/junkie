@@ -21,7 +21,7 @@ class CoreContext:
         self._factories.update(factories)
 
     @contextmanager
-    def build_dict(self, names: Union[Set[str], List[str]]) -> Dict[str, object]:
+    def build_instance_dict(self, names: Union[Set[str], List[str]]) -> Dict[str, object]:
         self.logger.debug("build(%s)", names)
 
         with ExitStack() as stack:

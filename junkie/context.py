@@ -24,7 +24,7 @@ class Context(CoreContext):
     @contextmanager
     def build(self, names_or_type: Union[Set[str], List[str], Tuple[str, ...], str, type]):
         if isinstance(names_or_type, (set, list)):
-            with self.build_dict(names_or_type) as instance_dict:
+            with self.build_instance_dict(names_or_type) as instance_dict:
                 yield instance_dict
 
         elif isinstance(names_or_type, tuple):

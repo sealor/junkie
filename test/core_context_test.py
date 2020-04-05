@@ -12,14 +12,14 @@ class CoreContextTest(unittest.TestCase):
         context = CoreContext()
         context.add_instances({"text": "abc"})
 
-        with context.build_dict({"text"}) as instances:
+        with context.build_instance_dict({"text"}) as instances:
             self.assertEqual({"text": "abc"}, instances)
 
     def test_simple_factory(self):
         context = CoreContext()
         context.add_factories({"text": lambda: "abc"})
 
-        with context.build_dict({"text"}) as instances:
+        with context.build_instance_dict({"text"}) as instances:
             self.assertEqual({"text": "abc"}, instances)
 
     def test_factory_using_other_factory(self):
@@ -27,7 +27,7 @@ class CoreContextTest(unittest.TestCase):
         context.add_instances({"prefix": "abc", "suffix": "def"})
         context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
 
-        with context.build_dict({"text", "prefix"}) as instances:
+        with context.build_instance_dict({"text", "prefix"}) as instances:
             self.assertEqual({"text": "abcdef", "prefix": "abc"}, instances)
 
     def test_build_instance_by_dict_with_list_in_right_order(self):
@@ -46,7 +46,7 @@ class CoreContextTest(unittest.TestCase):
         names = ["a", "b", "c", "d", "e"]
         random.shuffle(names)
 
-        with context.build_dict(names):
+        with context.build_instance_dict(names):
             self.assertEqual(names, test_logger)
 
     def test_build_instance_by_type(self):
