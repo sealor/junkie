@@ -77,6 +77,33 @@ class CoreContext:
 
         return tuple(instances)
 
+    @overload
+    def build_dict(self, target_dict: Dict[str, Union[str, type, Callable]]) -> Dict[str, object]:
+        pass
+
+    @overload
+    def build_dict(self, **target_kwargs: Union[str, type, Callable]) -> Dict[str, object]:
+        pass
+
+    @contextmanager
+    def build_dict(self, *args, **kwargs):
+        with ExitStack() as stack:
+            if len(args) == 1 and isinstance(args[0], dict):
+                target_dict = args[0]
+            else:
+                target_dict = kwargs
+
+            self.logger.debug("build_dict(%r)", target_dict)
+            yield self._build_dict(stack, target_dict)
+
+    def _build_dict(self, stack: ExitStack, target_dict: Dict[str, Union[str, type, Callable]]) -> Dict[str, object]:
+        instance_dict = {}
+
+        for name, target in target_dict.items():
+            instance_dict[name] = self._build_element(stack, target)
+
+        return instance_dict
+
     @contextmanager
     def build_instance_dict(self, names: Union[Set[str], List[str]]) -> Dict[str, object]:
         self.logger.debug("build(%s)", names)
