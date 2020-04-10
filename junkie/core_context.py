@@ -21,6 +21,35 @@ class CoreContext:
         self._factories.update(factories)
 
     @contextmanager
+    def build_element(self, target: Union[str, type, Callable]) -> object:
+        assert isinstance(target, (str, type, Callable))
+
+        with ExitStack() as stack:
+            self.logger.debug("build_element(%r)", target)
+            yield self._build_element(stack, target)
+
+    def _build_element(self, stack: ExitStack, target: Union[str, type, Callable]):
+        if isinstance(target, str):
+            return self._build_element_by_name(stack, target)
+
+        if isinstance(target, (type, Callable)):
+            return self._build_element_by_type(stack, target)
+
+        raise Exception("Not found: {}".format(target))
+
+    def _build_element_by_name(self, stack: ExitStack, target_name: str) -> object:
+        if target_name in self._instances:
+            return self._instances[target_name]
+
+        if target_name in self._factories:
+            return self._call(self._factories[target_name], stack, target_name)
+
+        raise Exception("Not found: {}".format(target_name))
+
+    def _build_element_by_type(self, stack: ExitStack, target_factory: Union[type, Callable]) -> object:
+        return self._call(target_factory, stack, target_factory.__name__)
+
+    @contextmanager
     def build_instance_dict(self, names: Union[Set[str], List[str]]) -> Dict[str, object]:
         self.logger.debug("build(%s)", names)
 
