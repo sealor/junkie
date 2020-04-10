@@ -50,7 +50,23 @@ class CoreContextTest(unittest.TestCase):
         with context.build_element("text") as text:
             self.assertEqual("abcdef", text)
 
-    def test_build_instance_by_dict_with_list_in_right_order(self):
+    def test_resolve_instance_tuple(self):
+        context = CoreContext()
+        context.add_instances({"prefix": "abc", "suffix": "def"})
+        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
+
+        with context.build_tuple(("prefix", "suffix", "text")) as instance_tuple:
+            self.assertEqual(("abc", "def", "abcdef"), instance_tuple)
+
+    def test_resolve_instance_args(self):
+        context = CoreContext()
+        context.add_instances({"prefix": "abc", "suffix": "def"})
+        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
+
+        with context.build_tuple("prefix", "suffix", "text") as (prefix, suffix, text):
+            self.assertEqual(("abc", "def", "abcdef"), (prefix, suffix, text))
+
+    def test_resolve_tuple_with_correct_order(self):
         def func(letter):
             def factory_func(logger):
                 logger.append(letter)
@@ -66,7 +82,7 @@ class CoreContextTest(unittest.TestCase):
         names = ["a", "b", "c", "d", "e"]
         random.shuffle(names)
 
-        with context.build_instance_dict(names):
+        with context.build_tuple(tuple(names)):
             self.assertEqual(names, test_logger)
 
     def test_build_instance_by_type(self):

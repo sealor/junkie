@@ -2,7 +2,7 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Set, List, Dict, Callable, Tuple
+from typing import Union, Set, List, Dict, Callable, Tuple, overload
 
 import junkie
 
@@ -48,6 +48,34 @@ class CoreContext:
 
     def _build_element_by_type(self, stack: ExitStack, target_factory: Union[type, Callable]) -> object:
         return self._call(target_factory, stack, target_factory.__name__)
+
+    @overload
+    def build_tuple(self, target_tuple: Tuple[Union[str, type, Callable], ...]) -> Tuple[object]:
+        pass
+
+    @overload
+    def build_tuple(self, *target_args: Union[str, type, Callable]) -> Tuple[object]:
+        pass
+
+    @contextmanager
+    def build_tuple(self, *args):
+        with ExitStack() as stack:
+            if len(args) == 1 and isinstance(args[0], tuple):
+                target_tuple = args[0]
+            else:
+                target_tuple = args
+
+            self.logger.debug("build_tuple(%r)", target_tuple)
+            yield self._build_tuple(stack, target_tuple)
+
+    def _build_tuple(self, stack: ExitStack, target_tuple: Tuple[Union[str, type, Callable], ...]) -> Tuple[object]:
+        instances = []
+
+        for target in target_tuple:
+            instance = self._build_element(stack, target)
+            instances.append(instance)
+
+        return tuple(instances)
 
     @contextmanager
     def build_instance_dict(self, names: Union[Set[str], List[str]]) -> Dict[str, object]:
