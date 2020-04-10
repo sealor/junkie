@@ -22,7 +22,7 @@ class Context(CoreContext):
                     self._instances[key] = value
 
     @contextmanager
-    def build(self, names_or_type: Union[Set[str], List[str], Tuple[str, ...], str, type]):
+    def build_instances(self, names_or_type: Union[Set[str], List[str], Tuple[str, ...], str, type]):
         if isinstance(names_or_type, (set, list)):
             with self.build_instance_dict(names_or_type) as instance_dict:
                 yield instance_dict
