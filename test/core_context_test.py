@@ -228,3 +228,17 @@ class CoreContextTest(unittest.TestCase):
             core_context.add_instances({
                 "cached_instance": junkie.cache("wuff")
             })
+
+    def test_cached_instance_from_context_manager(self):
+        @contextmanager
+        def create_object():
+            yield object()
+
+        core_context = CoreContext()
+        core_context.add_factories({
+            "cached": junkie.cache(create_object)
+        })
+
+        with core_context.build_instance_by_name("cached") as object1:
+            with core_context.build_instance_by_name("cached") as object2:
+                self.assertIs(object1, object2)

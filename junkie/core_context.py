@@ -2,7 +2,7 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Set, List, Dict, Callable, Tuple
+from typing import Union, Set, List, Dict, Callable, Tuple, ContextManager
 
 import junkie
 
@@ -89,13 +89,16 @@ class CoreContext:
         self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(args.keys()))
         instance = factory_func(**args)
 
+        if hasattr(instance, "__enter__"):
+            instance = self._get_instance_from_context_manager(instance, instance_name, stack)
+
         if hasattr(factory_func, "__junkie_cached__"):
             self._instances[instance_name] = instance
 
-        if hasattr(instance, "__enter__"):
-            self.logger.debug("%s.__enter__()", instance_name)
-            stack.push(lambda *exception_details: self.logger.debug("%s.__exit__()", instance_name))
+        return instance
 
-            instance = stack.enter_context(instance)
-
+    def _get_instance_from_context_manager(self, context_manager: ContextManager, instance_name: str, stack: ExitStack):
+        self.logger.debug("%s.__enter__()", instance_name)
+        stack.push(lambda *exception_details: self.logger.debug("%s.__exit__()", instance_name))
+        instance = stack.enter_context(context_manager)
         return instance
