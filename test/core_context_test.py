@@ -220,8 +220,8 @@ class CoreContextTest(unittest.TestCase):
             "cached": junkie.cache(MyClass)
         })
 
-        with core_context.build_instance_by_name("cached") as my_class1:
-            with core_context.build_instance_by_name("cached") as my_class2:
+        with core_context.build_element("cached") as my_class1:
+            with core_context.build_element("cached") as my_class2:
                 self.assertIs(my_class1, my_class2)
 
     def test_cached_lambda(self):
@@ -231,8 +231,8 @@ class CoreContextTest(unittest.TestCase):
             "cached": junkie.cache(lambda: "wuff")
         })
 
-        with core_context.build_instance_by_name("cached") as lambda_result1:
-            with core_context.build_instance_by_name("cached") as lambda_result2:
+        with core_context.build_element("cached") as lambda_result1:
+            with core_context.build_element("cached") as lambda_result2:
                 self.assertIs(lambda_result1, lambda_result2)
 
     def test_can_not_cached_exception(self):
@@ -242,3 +242,17 @@ class CoreContextTest(unittest.TestCase):
             core_context.add_instances({
                 "cached_instance": junkie.cache("wuff")
             })
+
+    def test_cached_instance_from_context_manager(self):
+        @contextmanager
+        def create_object():
+            yield object()
+
+        core_context = CoreContext()
+        core_context.add_factories({
+            "cached": junkie.cache(create_object)
+        })
+
+        with core_context.build_element("cached") as object1:
+            with core_context.build_element("cached") as object2:
+                self.assertIs(object1, object2)
