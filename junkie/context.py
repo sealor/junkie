@@ -1,5 +1,3 @@
-from contextlib import contextmanager
-from typing import Set, List
 from typing import Union, Dict, Callable, Tuple, overload
 
 from junkie.core_context import CoreContext
@@ -21,27 +19,6 @@ class Context(CoreContext):
                     self._factories[key] = value
                 else:
                     self._instances[key] = value
-
-    @contextmanager
-    def build_instances(self, names_or_type: Union[Set[str], List[str], Tuple[str, ...], str, type]):
-        if isinstance(names_or_type, (set, list)):
-            with self.build_instance_dict(names_or_type) as instance_dict:
-                yield instance_dict
-
-        elif isinstance(names_or_type, tuple):
-            with self.build_instance_by_names(names_or_type) as instance:
-                yield instance
-
-        elif isinstance(names_or_type, str):
-            with self.build_instance_by_name(names_or_type) as instance:
-                yield instance
-
-        elif isinstance(names_or_type, type):
-            with self.build_instance_by_type(names_or_type) as instance:
-                yield instance
-
-        else:
-            raise Exception("Type not known (set, list, str or type/class expected): {}".format(type(names_or_type)))
 
     @overload
     def build(self, target: Union[str, type, Callable]) -> object:

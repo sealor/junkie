@@ -2,7 +2,7 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Set, List, Dict, Callable, Tuple, overload
+from typing import Union, Dict, Callable, Tuple, overload
 
 import junkie
 
@@ -103,54 +103,6 @@ class CoreContext:
             instance_dict[name] = self._build_element(stack, target)
 
         return instance_dict
-
-    @contextmanager
-    def build_instance_dict(self, names: Union[Set[str], List[str]]) -> Dict[str, object]:
-        self.logger.debug("build(%s)", names)
-
-        with ExitStack() as stack:
-            instance_dict = {}
-
-            for name in names:
-                instance_dict[name] = self._build_instance_by_name(name, stack)
-
-            yield instance_dict
-
-    @contextmanager
-    def build_instance_by_names(self, names: Tuple[str, ...]) -> Tuple[object]:
-        self.logger.debug("build(%s)", names)
-
-        with ExitStack() as stack:
-            instances = []
-
-            for name in names:
-                instance = self._build_instance_by_name(name, stack)
-                instances.append(instance)
-
-            yield tuple(instances)
-
-    @contextmanager
-    def build_instance_by_name(self, name: str) -> object:
-        self.logger.debug("build('%s')", name)
-
-        with ExitStack() as stack:
-            yield self._build_instance_by_name(name, stack)
-
-    def _build_instance_by_name(self, name: str, stack: ExitStack):
-        if name in self._instances:
-            return self._instances[name]
-
-        if name in self._factories:
-            return self._call(self._factories[name], stack, name)
-
-        raise Exception("Not found: {}".format(name))
-
-    @contextmanager
-    def build_instance_by_type(self, constructor: type) -> object:
-        self.logger.debug("build(%s)", constructor.__name__)
-
-        with ExitStack() as stack:
-            yield self._call(constructor, stack, constructor.__name__)
 
     def _call(self, factory_func: Callable, stack: ExitStack, instance_name: str):
         args = OrderedDict()

@@ -22,20 +22,7 @@ class ContextTest(unittest.TestCase):
             {"suffix": "xyz"}
         )
 
-        with context.build_instances({"text", "prefix"}) as instance:
-            self.assertEqual({"text": "abcxyz", "prefix": "abc"}, instance)
-
-        with context.build_instances(["text", "prefix"]) as instance:
-            self.assertEqual({"text": "abcxyz", "prefix": "abc"}, instance)
-
-        with context.build_instances(("text", "prefix")) as (text, prefix):
-            self.assertEqual("abcxyz", text)
-            self.assertEqual("abc", prefix)
-
         with context.build("class") as instance:
-            self.assertEqual("abcxyz", instance.text)
-
-        with context.build_instances(Class) as instance:
             self.assertEqual("abcxyz", instance.text)
 
     def test_add_none_context(self):

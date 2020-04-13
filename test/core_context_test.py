@@ -101,44 +101,6 @@ class CoreContextTest(unittest.TestCase):
         with context.build_dict(A="prefix", B="suffix", C="text") as instance_dict:
             self.assertEqual({"A": "abc", "B": "def", "C": "abcdef"}, instance_dict)
 
-    def test_build_instance_by_type(self):
-        class Class:
-            def __init__(self, prefix, suffix):
-                self.text = prefix + suffix
-
-        context = CoreContext()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-
-        with context.build_instance_by_type(Class) as instance:
-            self.assertEqual("abcdef", instance.text)
-
-    def test_build_instance_by_name(self):
-        class Class:
-            def __init__(self, prefix, suffix):
-                self.text = prefix + suffix
-
-        context = CoreContext()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": Class})
-
-        with context.build_instance_by_name("text") as instance:
-            self.assertEqual("abcdef", instance.text)
-
-    def test_build_instance_by_names(self):
-        class Class:
-            def __init__(self, prefix, suffix):
-                self.text = prefix + suffix
-
-        context = CoreContext()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": Class})
-
-        with context.build_instance_by_names(("text", "text")) as (instance1, instance2):
-            self.assertEqual("abcdef", instance1.text)
-            self.assertEqual("abcdef", instance2.text)
-
-            self.assertNotEqual(instance1, instance2)
-
     def test_default_argument_usage(self):
         class MyClassWithDefaultArguments:
             def __init__(self, argument: str, default_argument: int = 10, default_argument2: str = None):
