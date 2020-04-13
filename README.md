@@ -28,6 +28,6 @@ context = Context({
     "text": lambda greeting, name: f"{greeting} {name}!"
 })
 
-with context.build_instances(App) as app:
+with context.build(App) as app:
     assert app.greets() == "Hello Joe!"
 ```
