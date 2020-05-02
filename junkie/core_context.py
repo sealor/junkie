@@ -2,7 +2,7 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Set, List, Dict, Callable, Tuple, ContextManager
+from typing import ContextManager, Union, Dict, Callable, Tuple, overload
 
 import junkie
 
@@ -21,52 +21,88 @@ class CoreContext:
         self._factories.update(factories)
 
     @contextmanager
-    def build_dict(self, names: Union[Set[str], List[str]]) -> Dict[str, object]:
-        self.logger.debug("build(%s)", names)
+    def build_element(self, target: Union[str, type, Callable]) -> object:
+        assert isinstance(target, (str, type, Callable))
 
         with ExitStack() as stack:
-            instance_dict = {}
+            self.logger.debug("build_element(%r)", target)
+            yield self._build_element(stack, target)
 
-            for name in names:
-                instance_dict[name] = self._build_instance_by_name(name, stack)
+    def _build_element(self, stack: ExitStack, target: Union[str, type, Callable]):
+        if isinstance(target, str):
+            return self._build_element_by_name(stack, target)
 
-            yield instance_dict
+        if isinstance(target, (type, Callable)):
+            return self._build_element_by_type(stack, target)
+
+        raise Exception("Not found: {}".format(target))
+
+    def _build_element_by_name(self, stack: ExitStack, target_name: str) -> object:
+        if target_name in self._instances:
+            return self._instances[target_name]
+
+        if target_name in self._factories:
+            return self._call(self._factories[target_name], stack, target_name)
+
+        raise Exception("Not found: {}".format(target_name))
+
+    def _build_element_by_type(self, stack: ExitStack, target_factory: Union[type, Callable]) -> object:
+        return self._call(target_factory, stack, target_factory.__name__)
+
+    @overload
+    def build_tuple(self, target_tuple: Tuple[Union[str, type, Callable], ...]) -> Tuple[object]:
+        pass
+
+    @overload
+    def build_tuple(self, *target_args: Union[str, type, Callable]) -> Tuple[object]:
+        pass
 
     @contextmanager
-    def build_instance_by_names(self, names: Tuple[str, ...]) -> Tuple[object]:
-        self.logger.debug("build(%s)", names)
-
+    def build_tuple(self, *args):
         with ExitStack() as stack:
-            instances = []
+            if len(args) == 1 and isinstance(args[0], tuple):
+                target_tuple = args[0]
+            else:
+                target_tuple = args
 
-            for name in names:
-                instance = self._build_instance_by_name(name, stack)
-                instances.append(instance)
+            self.logger.debug("build_tuple(%r)", target_tuple)
+            yield self._build_tuple(stack, target_tuple)
 
-            yield tuple(instances)
+    def _build_tuple(self, stack: ExitStack, target_tuple: Tuple[Union[str, type, Callable], ...]) -> Tuple[object]:
+        instances = []
+
+        for target in target_tuple:
+            instance = self._build_element(stack, target)
+            instances.append(instance)
+
+        return tuple(instances)
+
+    @overload
+    def build_dict(self, target_dict: Dict[str, Union[str, type, Callable]]) -> Dict[str, object]:
+        pass
+
+    @overload
+    def build_dict(self, **target_kwargs: Union[str, type, Callable]) -> Dict[str, object]:
+        pass
 
     @contextmanager
-    def build_instance_by_name(self, name: str) -> object:
-        self.logger.debug("build('%s')", name)
-
+    def build_dict(self, *args, **kwargs):
         with ExitStack() as stack:
-            yield self._build_instance_by_name(name, stack)
+            if len(args) == 1 and isinstance(args[0], dict):
+                target_dict = args[0]
+            else:
+                target_dict = kwargs
 
-    def _build_instance_by_name(self, name: str, stack: ExitStack):
-        if name in self._instances:
-            return self._instances[name]
+            self.logger.debug("build_dict(%r)", target_dict)
+            yield self._build_dict(stack, target_dict)
 
-        if name in self._factories:
-            return self._call(self._factories[name], stack, name)
+    def _build_dict(self, stack: ExitStack, target_dict: Dict[str, Union[str, type, Callable]]) -> Dict[str, object]:
+        instance_dict = {}
 
-        raise Exception("Not found: {}".format(name))
+        for name, target in target_dict.items():
+            instance_dict[name] = self._build_element(stack, target)
 
-    @contextmanager
-    def build_instance_by_type(self, constructor: type) -> object:
-        self.logger.debug("build(%s)", constructor.__name__)
-
-        with ExitStack() as stack:
-            yield self._call(constructor, stack, constructor.__name__)
+        return instance_dict
 
     def _call(self, factory_func: Callable, stack: ExitStack, instance_name: str):
         args = OrderedDict()

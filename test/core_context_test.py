@@ -9,29 +9,65 @@ from junkie.core_context import CoreContext
 
 
 class CoreContextTest(unittest.TestCase):
-    def test_simple_instance(self):
+    def test_resolve_instance_by_name(self):
         context = CoreContext()
         context.add_instances({"text": "abc"})
 
-        with context.build_dict({"text"}) as instances:
-            self.assertEqual({"text": "abc"}, instances)
+        with context.build_element("text") as instance:
+            self.assertEqual("abc", instance)
 
-    def test_simple_factory(self):
+    def test_resolve_instance_with_factory_by_name(self):
         context = CoreContext()
         context.add_factories({"text": lambda: "abc"})
 
-        with context.build_dict({"text"}) as instances:
-            self.assertEqual({"text": "abc"}, instances)
+        with context.build_element("text") as instance:
+            self.assertEqual("abc", instance)
 
-    def test_factory_using_other_factory(self):
+    def test_raise_exception_if_instance_name_is_unknown(self):
+        context = CoreContext()
+
+        with self.assertRaises(Exception) as exception_context:
+            with context.build_element("instance_name"):
+                pass
+
+        self.assertEqual("Not found: instance_name", str(exception_context.exception))
+
+    def test_resolve_instance_with_factory_by_type(self):
+        class AppClass:
+            def __init__(self, text: str):
+                self.text = text
+
+        context = CoreContext()
+        context.add_instances({"text": "abc"})
+
+        with context.build_element(AppClass) as instance:
+            self.assertEqual("abc", instance.text)
+
+    def test_resolve_instance_with_factory_using_two_instances(self):
         context = CoreContext()
         context.add_instances({"prefix": "abc", "suffix": "def"})
         context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
 
-        with context.build_dict({"text", "prefix"}) as instances:
-            self.assertEqual({"text": "abcdef", "prefix": "abc"}, instances)
+        with context.build_element("text") as text:
+            self.assertEqual("abcdef", text)
 
-    def test_build_instance_by_dict_with_list_in_right_order(self):
+    def test_resolve_instance_tuple(self):
+        context = CoreContext()
+        context.add_instances({"prefix": "abc", "suffix": "def"})
+        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
+
+        with context.build_tuple(("prefix", "suffix", "text")) as instance_tuple:
+            self.assertEqual(("abc", "def", "abcdef"), instance_tuple)
+
+    def test_resolve_instance_args(self):
+        context = CoreContext()
+        context.add_instances({"prefix": "abc", "suffix": "def"})
+        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
+
+        with context.build_tuple("prefix", "suffix", "text") as (prefix, suffix, text):
+            self.assertEqual(("abc", "def", "abcdef"), (prefix, suffix, text))
+
+    def test_resolve_tuple_with_correct_order(self):
         def func(letter):
             def factory_func(logger):
                 logger.append(letter)
@@ -47,46 +83,24 @@ class CoreContextTest(unittest.TestCase):
         names = ["a", "b", "c", "d", "e"]
         random.shuffle(names)
 
-        with context.build_dict(names):
+        with context.build_tuple(tuple(names)):
             self.assertEqual(names, test_logger)
 
-    def test_build_instance_by_type(self):
-        class Class:
-            def __init__(self, prefix, suffix):
-                self.text = prefix + suffix
-
+    def test_resolve_instance_dict(self):
         context = CoreContext()
         context.add_instances({"prefix": "abc", "suffix": "def"})
+        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
 
-        with context.build_instance_by_type(Class) as instance:
-            self.assertEqual("abcdef", instance.text)
+        with context.build_dict({"A": "prefix", "B": "suffix", "C": "text"}) as instance_dict:
+            self.assertEqual({"A": "abc", "B": "def", "C": "abcdef"}, instance_dict)
 
-    def test_build_instance_by_name(self):
-        class Class:
-            def __init__(self, prefix, suffix):
-                self.text = prefix + suffix
-
+    def test_resolve_instance_arg_dict(self):
         context = CoreContext()
         context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": Class})
+        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
 
-        with context.build_instance_by_name("text") as instance:
-            self.assertEqual("abcdef", instance.text)
-
-    def test_build_instance_by_names(self):
-        class Class:
-            def __init__(self, prefix, suffix):
-                self.text = prefix + suffix
-
-        context = CoreContext()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": Class})
-
-        with context.build_instance_by_names(("text", "text")) as (instance1, instance2):
-            self.assertEqual("abcdef", instance1.text)
-            self.assertEqual("abcdef", instance2.text)
-
-            self.assertNotEqual(instance1, instance2)
+        with context.build_dict(A="prefix", B="suffix", C="text") as instance_dict:
+            self.assertEqual({"A": "abc", "B": "def", "C": "abcdef"}, instance_dict)
 
     def test_default_argument_usage(self):
         class MyClassWithDefaultArguments:
@@ -98,7 +112,7 @@ class CoreContextTest(unittest.TestCase):
         core_context = CoreContext()
         core_context.add_instances({"argument": "value"})
 
-        with core_context.build_instance_by_type(MyClassWithDefaultArguments) as instance:
+        with core_context.build_element(MyClassWithDefaultArguments) as instance:
             self.assertEqual("value", instance.argument)
             self.assertEqual(10, instance.default_argument)
             self.assertEqual("Hello", instance.default_argument2)
@@ -113,7 +127,7 @@ class CoreContextTest(unittest.TestCase):
         core_context = CoreContext()
         core_context.add_instances({"argument": "value", "default_argument2": "set from context"})
 
-        with core_context.build_instance_by_type(MyClassWithDefaultArguments) as instance:
+        with core_context.build_element(MyClassWithDefaultArguments) as instance:
             self.assertEqual("value", instance.argument)
             self.assertEqual(10, instance.default_argument)
             self.assertEqual("set from context", instance.default_argument2)
@@ -146,7 +160,7 @@ class CoreContextTest(unittest.TestCase):
         context.add_instances({"logger": test_logger})
         context.add_factories({"message_service": MessageService, "database_context": create_database})
 
-        with context.build_instance_by_type(Class) as instance:
+        with context.build_element(Class) as instance:
             self.assertEqual(MessageService, type(instance.message_service))
             self.assertEqual("DB", instance.database_context)
 
@@ -181,17 +195,17 @@ class CoreContextTest(unittest.TestCase):
         })
 
         with self.assertLogs(level="DEBUG") as logging_context:
-            with context.build_instance_by_type(Class):
+            with context.build_element("class"):
                 logging.getLogger(__name__).info("execute context block")
 
         self.assertEqual([
-            "DEBUG:{}:build(Class)".format(junkie.__name__),
+            "DEBUG:{}:build_element('class')".format(junkie.__name__),
             "DEBUG:{}:connection_string = <lambda>([])".format(junkie.__name__),
             "DEBUG:{}:database_context = create_database(['connection_string'])".format(junkie.__name__),
             "DEBUG:{}:database_context.__enter__()".format(junkie.__name__),
             "DEBUG:{}:message_service = create_message_service([])".format(junkie.__name__),
             "DEBUG:{}:message_service.__enter__()".format(junkie.__name__),
-            "DEBUG:{}:Class = Class(['database_context', 'message_service', 'text'])".format(junkie.__name__),
+            "DEBUG:{}:class = Class(['database_context', 'message_service', 'text'])".format(junkie.__name__),
             "INFO:{}:execute context block".format(__name__),
             "DEBUG:{}:message_service.__exit__()".format(junkie.__name__),
             "DEBUG:{}:database_context.__exit__()".format(junkie.__name__),
@@ -206,8 +220,8 @@ class CoreContextTest(unittest.TestCase):
             "cached": junkie.cache(MyClass)
         })
 
-        with core_context.build_instance_by_name("cached") as my_class1:
-            with core_context.build_instance_by_name("cached") as my_class2:
+        with core_context.build_element("cached") as my_class1:
+            with core_context.build_element("cached") as my_class2:
                 self.assertIs(my_class1, my_class2)
 
     def test_cached_lambda(self):
@@ -217,8 +231,8 @@ class CoreContextTest(unittest.TestCase):
             "cached": junkie.cache(lambda: "wuff")
         })
 
-        with core_context.build_instance_by_name("cached") as lambda_result1:
-            with core_context.build_instance_by_name("cached") as lambda_result2:
+        with core_context.build_element("cached") as lambda_result1:
+            with core_context.build_element("cached") as lambda_result2:
                 self.assertIs(lambda_result1, lambda_result2)
 
     def test_can_not_cached_exception(self):
@@ -239,6 +253,6 @@ class CoreContextTest(unittest.TestCase):
             "cached": junkie.cache(create_object)
         })
 
-        with core_context.build_instance_by_name("cached") as object1:
-            with core_context.build_instance_by_name("cached") as object2:
+        with core_context.build_element("cached") as object1:
+            with core_context.build_element("cached") as object2:
                 self.assertIs(object1, object2)
