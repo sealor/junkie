@@ -256,3 +256,25 @@ class CoreContextTest(unittest.TestCase):
         with core_context.build_element("cached") as object1:
             with core_context.build_element("cached") as object2:
                 self.assertIs(object1, object2)
+
+    def test_cached_constructor_build_by_element_name(self):
+        class A:
+            pass
+
+        core_context = CoreContext()
+        core_context.add_factories({"a": junkie.cache(A)})
+
+        with core_context.build_element("a") as a1:
+            with core_context.build_element("a") as a2:
+                self.assertIs(a1, a2)
+
+    def test_cached_constructor_build_by_class(self):
+        class A:
+            pass
+
+        core_context = CoreContext()
+        core_context.add_factories({"a": junkie.cache(A)})
+
+        with core_context.build_element(A) as a1:
+            with core_context.build_element(A) as a2:
+                self.assertIsNot(a1, a2)
