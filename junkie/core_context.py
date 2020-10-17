@@ -109,18 +109,16 @@ class CoreContext:
 
         for name, annotation in inspect.signature(factory_func).parameters.items():
             if name in self._instances:
-                arg = self._instances[name]
+                args[name] = self._instances[name]
 
             elif name in self._factories:
-                arg = self._call(self._factories[name], stack, name)
+                args[name] = self._call(self._factories[name], stack, name)
 
             elif annotation.default is not inspect.Parameter.empty:
-                continue
+                args[name] = annotation.default
 
             else:
                 raise Exception("Not found: " + name)
-
-            args[name] = arg
 
         self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(args.keys()))
         instance = factory_func(**args)
