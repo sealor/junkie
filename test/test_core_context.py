@@ -131,64 +131,39 @@ class CoreContextTest(unittest.TestCase):
             self.assertEqual(10, instance.default_argument)
             self.assertEqual("set from context", instance.default_argument2)
 
-    def test_empty_args_usage(self):
-        class MyClassWithArgs:
-            def __init__(self, *args):
-                self.args = args
+    def test_empty_kwargs_usage(self):
+        class MyClassWithKwargs:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
 
         core_context = CoreContext()
-        with core_context.build_element(MyClassWithArgs) as instance:
-            self.assertEqual((), instance.args)
+        with core_context.build_element(MyClassWithKwargs) as instance:
+            self.assertEqual({}, instance.kwargs)
 
-    def test_args_usage_with_tuple(self):
-        class MyClassWithArgs:
-            def __init__(self, *my_vars):
+    def test_kwargs_usage_with_dictionary(self):
+        class MyClassWithKwargs:
+            def __init__(self, **my_vars):
                 self.my_vars = my_vars
 
         core_context = CoreContext()
-        core_context.add_instances({"my_vars": ("a", "b")})
+        core_context.add_instances({"my_vars": {"a": "a"}})
 
-        with core_context.build_element(MyClassWithArgs) as instance:
-            self.assertEqual(("a", "b"), instance.my_vars)
+        with core_context.build_element(MyClassWithKwargs) as instance:
+            self.assertEqual({"a": "a"}, instance.my_vars)
 
-    def test_args_usage_with_list(self):
-        class MyClassWithArgs:
-            def __init__(self, *my_vars):
+    def test_kwargs_usage_with_factory_function(self):
+        class MyClassWithKwargs:
+            def __init__(self, **my_vars):
                 self.my_vars = my_vars
 
-        core_context = CoreContext()
-        core_context.add_instances({"my_vars": ["a", "b"]})
-
-        with core_context.build_element(MyClassWithArgs) as instance:
-            self.assertEqual(("a", "b"), instance.my_vars)
-
-    def test_args_usage_with_factory_function_returning_tuple(self):
-        class MyClassWithArgs:
-            def __init__(self, *my_vars):
-                self.my_vars = my_vars
-
-        def create_args():
-            return ("a", "b")
+        def create_kwargs():
+            return {"a": "a"}
 
         core_context = CoreContext()
-        core_context.add_factories({"my_vars": create_args})
+        core_context.add_factories({"my_vars": create_kwargs})
 
-        with core_context.build_element(MyClassWithArgs) as instance:
-            self.assertEqual(("a", "b"), instance.my_vars)
-
-    def test_args_usage_with_factory_function_returning_list(self):
-        class MyClassWithArgs:
-            def __init__(self, *my_vars):
-                self.my_vars = my_vars
-
-        def create_args():
-            return ["a", "b"]
-
-        core_context = CoreContext()
-        core_context.add_factories({"my_vars": create_args})
-
-        with core_context.build_element(MyClassWithArgs) as instance:
-            self.assertEqual(("a", "b"), instance.my_vars)
+        with core_context.build_element(MyClassWithKwargs) as instance:
+            self.assertEqual({"a": "a"}, instance.my_vars)
 
     def test_context_manager_enter_and_exit(self):
         class Class:
