@@ -105,23 +105,23 @@ class CoreContext:
         return instance_dict
 
     def _call(self, factory_func: Callable, stack: ExitStack, instance_name: str):
-        args = OrderedDict()
+        argument_dict = OrderedDict()
 
         for name, annotation in inspect.signature(factory_func).parameters.items():
             if name in self._instances:
-                args[name] = self._instances[name]
+                argument_dict[name] = self._instances[name]
 
             elif name in self._factories:
-                args[name] = self._call(self._factories[name], stack, name)
+                argument_dict[name] = self._call(self._factories[name], stack, name)
 
             elif annotation.default is not inspect.Parameter.empty:
-                args[name] = annotation.default
+                argument_dict[name] = annotation.default
 
             else:
                 raise Exception("Not found: " + name)
 
-        self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(args.keys()))
-        instance = factory_func(**args)
+        self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(argument_dict.keys()))
+        instance = factory_func(**argument_dict)
 
         if hasattr(instance, "__enter__"):
             self.logger.debug("%s.__enter__()", instance_name)
