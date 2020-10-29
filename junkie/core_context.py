@@ -108,9 +108,16 @@ class CoreContext:
 
     def _call(self, factory_func: Callable, instance_name: str):
         argument_dict = OrderedDict()
+        args = ()
 
         for name, annotation in inspect.signature(factory_func).parameters.items():
-            if name in self._instances:
+            if annotation.kind is inspect.Parameter.VAR_POSITIONAL:
+                if name in self._instances:
+                    args = self._instances[name]
+                elif name in self._factories:
+                    args = self._call(self._factories[name], name)
+
+            elif name in self._instances:
                 argument_dict[name] = self._instances[name]
 
             elif name in self._factories:
@@ -123,7 +130,7 @@ class CoreContext:
                 raise Exception("Not found: " + name)
 
         self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(argument_dict.keys()))
-        instance = factory_func(**argument_dict)
+        instance = factory_func(*argument_dict.values(), *args)
 
         if hasattr(instance, "__enter__"):
             self.logger.debug("%s.__enter__()", instance_name)
