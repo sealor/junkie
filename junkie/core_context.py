@@ -107,6 +107,20 @@ class CoreContext:
         return instance_dict
 
     def _call(self, factory_func: Callable, instance_name: str):
+        argument_dict, args, kwargs = self._resolve_factory_arguments(factory_func)
+
+        self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(argument_dict.keys()))
+        instance = factory_func(*argument_dict.values(), *args, **kwargs)
+
+        if hasattr(instance, "__enter__"):
+            self.logger.debug("%s.__enter__()", instance_name)
+            self._stack.push(lambda *exception_details: self.logger.debug("%s.__exit__()", instance_name))
+
+            instance = self._stack.enter_context(instance)
+
+        return instance
+
+    def _resolve_factory_arguments(self, factory_func):
         argument_dict = OrderedDict()
         args = ()
         kwargs = {}
@@ -136,13 +150,4 @@ class CoreContext:
             else:
                 raise Exception("Not found: " + name)
 
-        self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(argument_dict.keys()))
-        instance = factory_func(*argument_dict.values(), *args, **kwargs)
-
-        if hasattr(instance, "__enter__"):
-            self.logger.debug("%s.__enter__()", instance_name)
-            self._stack.push(lambda *exception_details: self.logger.debug("%s.__exit__()", instance_name))
-
-            instance = self._stack.enter_context(instance)
-
-        return instance
+        return argument_dict, args, kwargs
