@@ -2,6 +2,7 @@ import logging
 import random
 import unittest
 from contextlib import contextmanager
+from functools import wraps
 
 import junkie
 from junkie.core_context import CoreContext
@@ -243,3 +244,63 @@ class CoreContextTest(unittest.TestCase):
             "DEBUG:{}:message_service.__exit__()".format(junkie.__name__),
             "DEBUG:{}:database_context.__exit__()".format(junkie.__name__),
         ], logging_context.output)
+
+    def test_cached_instance(self):
+        def create_object(arg):
+            assert arg == "hello"
+            return object()
+
+        core_context = CoreContext()
+        core_context.add_instances({
+            "arg": "hello"
+        })
+        core_context.add_factories({
+            "cached": cache(create_object),
+        })
+
+        with core_context.build_element("cached") as object1:
+            with core_context.build_element("cached") as object2:
+                self.assertIs(object1, object2)
+
+    def test_cached_instance_from_context_manager(self):
+        @contextmanager
+        def create_object(arg):
+            assert arg == "hello"
+            yield object()
+
+        core_context = CoreContext()
+        core_context.add_instances({
+            "arg": "hello"
+        })
+        core_context.add_factories({
+            "cached": cache(create_object),
+        })
+
+        with core_context.build_element("cached") as object1:
+            with core_context.build_element("cached") as object2:
+                self.assertIs(object1, object2)
+
+
+def cache(factory):
+    instance_cache = None
+
+    @contextmanager
+    @wraps(factory)
+    def factory_func(*args, **kwargs):
+        nonlocal instance_cache
+
+        if instance_cache:
+            yield instance_cache
+        else:
+            factory_instance = factory(*args, **kwargs)
+            if hasattr(factory_instance, "__enter__"):
+                with factory_instance as context_instance:
+                    instance_cache = context_instance
+                    yield instance_cache
+                    instance_cache = None
+            else:
+                instance_cache = factory_instance
+                yield instance_cache
+                instance_cache = None
+
+    return factory_func
