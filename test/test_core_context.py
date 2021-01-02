@@ -282,25 +282,27 @@ class CoreContextTest(unittest.TestCase):
 
 
 def cache(factory):
-    instance_cache = None
+    cache_instance = None
 
     @contextmanager
     @wraps(factory)
     def factory_func(*args, **kwargs):
-        nonlocal instance_cache
+        nonlocal cache_instance
 
-        if instance_cache:
-            yield instance_cache
+        if cache_instance:
+            yield cache_instance
         else:
-            factory_instance = factory(*args, **kwargs)
-            if hasattr(factory_instance, "__enter__"):
-                with factory_instance as context_instance:
-                    instance_cache = context_instance
-                    yield instance_cache
-                    instance_cache = None
-            else:
-                instance_cache = factory_instance
-                yield instance_cache
-                instance_cache = None
+            with create_cache_instance(*args, **kwargs) as cache_instance:
+                yield cache_instance
+                cache_instance = None
+
+    @contextmanager
+    def create_cache_instance(*args, **kwargs):
+        factory_instance = factory(*args, **kwargs)
+        if hasattr(factory_instance, "__enter__"):
+            with factory_instance as context_instance:
+                yield context_instance
+        else:
+            yield factory_instance
 
     return factory_func
