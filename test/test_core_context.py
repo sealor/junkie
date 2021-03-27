@@ -4,6 +4,7 @@ import unittest
 from contextlib import contextmanager
 
 import junkie
+from junkie import DependencyCycleError
 from junkie.core_context import CoreContext
 
 
@@ -243,3 +244,24 @@ class CoreContextTest(unittest.TestCase):
             "DEBUG:{}:message_service.__exit__()".format(junkie.__name__),
             "DEBUG:{}:database_context.__exit__()".format(junkie.__name__),
         ], logging_context.output)
+
+    def test_DependencyCycleError(self):
+        core_context = CoreContext()
+        core_context.add_factories({
+            "a": lambda b1, b2: b1,
+            "b1": lambda: object(),
+            "b2": lambda c: c,
+            "c": lambda a: a
+        })
+
+        with self.assertRaises(DependencyCycleError) as exception:
+            with core_context.build_element("a"):
+                pass
+
+        self.assertEqual(
+            str(exception.exception),
+            "dependency cycle detected!\n"
+            "-> a\n"
+            "  -> b2\n"
+            "    -> c\n"
+            "      -> a")

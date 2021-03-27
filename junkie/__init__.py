@@ -1,1 +1,2 @@
 from junkie.context import Context
+from junkie.dependency_cycle_checker import DependencyCycleError

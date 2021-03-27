@@ -5,6 +5,7 @@ from contextlib import contextmanager, ExitStack
 from typing import Union, Dict, Callable, Tuple, overload
 
 import junkie
+from junkie.dependency_cycle_checker import DependencyCycleChecker
 
 
 class CoreContext:
@@ -106,8 +107,11 @@ class CoreContext:
 
         return instance_dict
 
-    def _call(self, factory_func: Callable, instance_name: str):
-        argument_dict, args, kwargs = self._resolve_factory_arguments(factory_func)
+    def _call(self, factory_func: Callable, instance_name: str, cycle_checker: DependencyCycleChecker = None):
+        cycle_checker = cycle_checker or DependencyCycleChecker()
+        cycle_checker.push(instance_name)
+
+        argument_dict, args, kwargs = self._resolve_factory_arguments(factory_func, cycle_checker)
 
         self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(argument_dict.keys()))
         instance = factory_func(*argument_dict.values(), *args, **kwargs)
@@ -118,9 +122,11 @@ class CoreContext:
 
             instance = self._stack.enter_context(instance)
 
+        cycle_checker.pop()
+
         return instance
 
-    def _resolve_factory_arguments(self, factory_func):
+    def _resolve_factory_arguments(self, factory_func: Callable, cycle_checker: DependencyCycleChecker):
         argument_dict = OrderedDict()
         args = ()
         kwargs = {}
@@ -130,19 +136,19 @@ class CoreContext:
                 if name in self._instances:
                     args = self._instances[name]
                 elif name in self._factories:
-                    args = self._call(self._factories[name], name)
+                    args = self._call(self._factories[name], name, cycle_checker)
 
             elif annotation.kind is inspect.Parameter.VAR_KEYWORD:
                 if name in self._instances:
                     kwargs = self._instances[name]
                 elif name in self._factories:
-                    kwargs = self._call(self._factories[name], name)
+                    kwargs = self._call(self._factories[name], name, cycle_checker)
 
             elif name in self._instances:
                 argument_dict[name] = self._instances[name]
 
             elif name in self._factories:
-                argument_dict[name] = self._call(self._factories[name], name)
+                argument_dict[name] = self._call(self._factories[name], name, cycle_checker)
 
             elif annotation.default is not inspect.Parameter.empty:
                 argument_dict[name] = annotation.default
