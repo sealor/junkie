@@ -13,14 +13,14 @@ from junkie.context import Context
 class ContextTest(unittest.TestCase):
     def test_resolve_instance_by_name(self):
         context = Context()
-        context.add_instances({"text": "abc"})
+        context.add({"text": "abc"})
 
         with context.build_element("text") as instance:
             self.assertEqual("abc", instance)
 
     def test_resolve_instance_with_factory_by_name(self):
         context = Context()
-        context.add_factories({"text": lambda: "abc"})
+        context.add({"text": lambda: "abc"})
 
         with context.build_element("text") as instance:
             self.assertEqual("abc", instance)
@@ -65,31 +65,31 @@ class ContextTest(unittest.TestCase):
                 self.text = text
 
         context = Context()
-        context.add_instances({"text": "abc"})
+        context.add({"text": "abc"})
 
         with context.build_element(AppClass) as instance:
             self.assertEqual("abc", instance.text)
 
     def test_resolve_instance_with_factory_using_two_instances(self):
         context = Context()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
+        context.add({"prefix": "abc", "suffix": "def"})
+        context.add({"text": lambda prefix, suffix: prefix + suffix})
 
         with context.build_element("text") as text:
             self.assertEqual("abcdef", text)
 
     def test_resolve_instance_tuple(self):
         context = Context()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
+        context.add({"prefix": "abc", "suffix": "def"})
+        context.add({"text": lambda prefix, suffix: prefix + suffix})
 
         with context.build_tuple(("prefix", "suffix", "text")) as instance_tuple:
             self.assertEqual(("abc", "def", "abcdef"), instance_tuple)
 
     def test_resolve_instance_args(self):
         context = Context()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
+        context.add({"prefix": "abc", "suffix": "def"})
+        context.add({"text": lambda prefix, suffix: prefix + suffix})
 
         with context.build_tuple("prefix", "suffix", "text") as (prefix, suffix, text):
             self.assertEqual(("abc", "def", "abcdef"), (prefix, suffix, text))
@@ -104,8 +104,8 @@ class ContextTest(unittest.TestCase):
 
         test_logger = []
         context = Context()
-        context.add_factories({"a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e")})
-        context.add_instances({"logger": test_logger})
+        context.add({"a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e")})
+        context.add({"logger": test_logger})
 
         names = ["a", "b", "c", "d", "e"]
         random.shuffle(names)
@@ -121,7 +121,7 @@ class ContextTest(unittest.TestCase):
                 self.default_argument2 = default_argument2 or "Hello"
 
         core_context = Context()
-        core_context.add_instances({"argument": "value"})
+        core_context.add({"argument": "value"})
 
         with core_context.build_element(MyClassWithDefaultArguments) as instance:
             self.assertEqual("value", instance.argument)
@@ -136,7 +136,7 @@ class ContextTest(unittest.TestCase):
                 self.default_argument2 = default_argument2 or "Hello"
 
         core_context = Context()
-        core_context.add_instances({"argument": "value", "default_argument2": "set from context"})
+        core_context.add({"argument": "value", "default_argument2": "set from context"})
 
         with core_context.build_element(MyClassWithDefaultArguments) as instance:
             self.assertEqual("value", instance.argument)
@@ -158,7 +158,7 @@ class ContextTest(unittest.TestCase):
                 self.my_vars = my_vars
 
         core_context = Context()
-        core_context.add_instances({"my_vars": {"a": "a"}})
+        core_context.add({"my_vars": {"a": "a"}})
 
         with core_context.build_element(MyClassWithKwargs) as instance:
             self.assertEqual({"a": "a"}, instance.my_vars)
@@ -172,7 +172,7 @@ class ContextTest(unittest.TestCase):
             return {"a": "a"}
 
         core_context = Context()
-        core_context.add_factories({"my_vars": create_kwargs})
+        core_context.add({"my_vars": create_kwargs})
 
         with core_context.build_element(MyClassWithKwargs) as instance:
             self.assertEqual({"a": "a"}, instance.my_vars)
@@ -202,8 +202,8 @@ class ContextTest(unittest.TestCase):
 
         test_logger = list()
         context = Context()
-        context.add_instances({"logger": test_logger})
-        context.add_factories({"message_service": MessageService, "database_context": create_database})
+        context.add({"logger": test_logger})
+        context.add({"message_service": MessageService, "database_context": create_database})
 
         with context.build_element(Class) as instance:
             self.assertEqual(MessageService, type(instance.message_service))
@@ -249,8 +249,8 @@ class ContextTest(unittest.TestCase):
             yield "message-service"
 
         context = Context()
-        context.add_instances({"text": "abc"})
-        context.add_factories({
+        context.add({"text": "abc"})
+        context.add({
             "connection_string": lambda: "URL",
             "database_context": create_database,
             "message_service": create_message_service,

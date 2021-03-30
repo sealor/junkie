@@ -18,12 +18,6 @@ class Context:
 
         self.add(*instances_and_factories_args)
 
-    def add_instances(self, instances: Dict[str, object]):
-        self._instances.update(instances)
-
-    def add_factories(self, factories: Dict[str, Callable]):
-        self._factories.update(factories)
-
     def add(self, *instances_and_factories_args: Union[Dict[str, object], Dict[str, Callable], None]):
         for instances_and_factories in instances_and_factories_args:
             if instances_and_factories is None:
