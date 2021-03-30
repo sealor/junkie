@@ -79,33 +79,6 @@ class CoreContext:
 
         return tuple(instances)
 
-    @overload
-    def build_dict(self, target_dict: Dict[str, Union[str, type, Callable]]) -> Dict[str, object]:
-        pass
-
-    @overload
-    def build_dict(self, **target_kwargs: Union[str, type, Callable]) -> Dict[str, object]:
-        pass
-
-    @contextmanager
-    def build_dict(self, *args, **kwargs):
-        with ExitStack() as self._stack:
-            if len(args) == 1 and isinstance(args[0], dict):
-                target_dict = args[0]
-            else:
-                target_dict = kwargs
-
-            self.logger.debug("build_dict(%r)", target_dict)
-            yield self._build_dict(target_dict)
-
-    def _build_dict(self, target_dict: Dict[str, Union[str, type, Callable]]) -> Dict[str, object]:
-        instance_dict = {}
-
-        for name, target in target_dict.items():
-            instance_dict[name] = self._build_element(target)
-
-        return instance_dict
-
     def _call(self, factory_func: Callable, instance_name: str):
         argument_dict, args, kwargs = self._resolve_factory_arguments(factory_func)
 

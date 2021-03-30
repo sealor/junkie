@@ -85,22 +85,6 @@ class CoreContextTest(unittest.TestCase):
         with context.build_tuple(tuple(names)):
             self.assertEqual(names, test_logger)
 
-    def test_resolve_instance_dict(self):
-        context = CoreContext()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
-
-        with context.build_dict({"A": "prefix", "B": "suffix", "C": "text"}) as instance_dict:
-            self.assertEqual({"A": "abc", "B": "def", "C": "abcdef"}, instance_dict)
-
-    def test_resolve_instance_arg_dict(self):
-        context = CoreContext()
-        context.add_instances({"prefix": "abc", "suffix": "def"})
-        context.add_factories({"text": lambda prefix, suffix: prefix + suffix})
-
-        with context.build_dict(A="prefix", B="suffix", C="text") as instance_dict:
-            self.assertEqual({"A": "abc", "B": "def", "C": "abcdef"}, instance_dict)
-
     def test_default_argument_usage(self):
         class MyClassWithDefaultArguments:
             def __init__(self, argument: str, default_argument: int = 10, default_argument2: str = None):
