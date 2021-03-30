@@ -2,7 +2,7 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Callable, Tuple, overload, Mapping, Any
+from typing import Union, Callable, Tuple, Mapping, Any
 
 import junkie
 
@@ -14,29 +14,17 @@ class Context:
         self._mapping = dict(instances_and_factories or {})
         self._stack = None
 
-    @overload
-    def build(self, element: Union[str, type, Callable]) -> object:
-        pass
-
-    @overload
-    def build(self, *args: Union[str, type, Callable]) -> Tuple[object]:
-        pass
-
-    def build(self, *args):
-        if len(args) == 1:
-            return self.build_element(*args)
-        else:
-            return self.build_tuple(*args)
-
     @contextmanager
-    def build_element(self, target: Union[str, type, Callable]) -> object:
-        assert isinstance(target, (str, type, Callable))
-
+    def build(self, *names_and_types: Union[str, type, Callable]) -> Union[object, Tuple[object]]:
         with ExitStack() as self._stack:
-            self.logger.debug("build_element(%r)", target)
-            yield self._build_element(target)
+            if len(names_and_types) == 1:
+                yield self._build_element(names_and_types[0])
+            else:
+                yield self._build_tuple(names_and_types)
 
     def _build_element(self, target: Union[str, type, Callable]):
+        self.logger.debug("build(%r)", target)
+
         if isinstance(target, str):
             return self._build_element_by_name(target)
 
@@ -59,26 +47,9 @@ class Context:
     def _build_element_by_type(self, target_factory: Union[type, Callable]) -> object:
         return self._call(target_factory, target_factory.__name__)
 
-    @overload
-    def build_tuple(self, target_tuple: Tuple[Union[str, type, Callable], ...]) -> Tuple[object]:
-        pass
-
-    @overload
-    def build_tuple(self, *target_args: Union[str, type, Callable]) -> Tuple[object]:
-        pass
-
-    @contextmanager
-    def build_tuple(self, *args):
-        with ExitStack() as self._stack:
-            if len(args) == 1 and isinstance(args[0], tuple):
-                target_tuple = args[0]
-            else:
-                target_tuple = args
-
-            self.logger.debug("build_tuple(%r)", target_tuple)
-            yield self._build_tuple(target_tuple)
-
     def _build_tuple(self, target_tuple: Tuple[Union[str, type, Callable], ...]) -> Tuple[object]:
+        self.logger.debug("build(%r)", target_tuple)
+
         instances = []
 
         for target in target_tuple:
