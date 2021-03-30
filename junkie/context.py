@@ -2,32 +2,17 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Dict, Callable, Tuple, overload
+from typing import Union, Callable, Tuple, overload, Mapping, Any
 
 import junkie
 
 
 class Context:
-    def __init__(self, *instances_and_factories_args: Union[Dict[str, object], Dict[str, Callable], None]):
+    def __init__(self, instances_and_factories: Mapping[str, Any] = None):
         self.logger = logging.getLogger(junkie.__name__)
 
-        self._instances = {}
-        self._factories = {}
-
+        self._mapping = dict(instances_and_factories or {})
         self._stack = None
-
-        self._add(*instances_and_factories_args)
-
-    def _add(self, *instances_and_factories_args: Union[Dict[str, object], Dict[str, Callable], None]):
-        for instances_and_factories in instances_and_factories_args:
-            if instances_and_factories is None:
-                continue
-
-            for key, value in instances_and_factories.items():
-                if callable(value):
-                    self._factories[key] = value
-                else:
-                    self._instances[key] = value
 
     @overload
     def build(self, element: Union[str, type, Callable]) -> object:
@@ -61,11 +46,13 @@ class Context:
         raise Exception("Not found: {}".format(target))
 
     def _build_element_by_name(self, target_name: str) -> object:
-        if target_name in self._instances:
-            return self._instances[target_name]
+        if target_name in self._mapping:
+            target = self._mapping[target_name]
 
-        if target_name in self._factories:
-            return self._call(self._factories[target_name], target_name)
+            if isinstance(target, (type, Callable)):
+                return self._call(target, target_name)
+            else:
+                return target
 
         raise Exception("Not found: {}".format(target_name))
 
@@ -121,22 +108,30 @@ class Context:
 
         for name, annotation in inspect.signature(factory_func).parameters.items():
             if annotation.kind is inspect.Parameter.VAR_POSITIONAL:
-                if name in self._instances:
-                    args = self._instances[name]
-                elif name in self._factories:
-                    args = self._call(self._factories[name], name)
+                if name in self._mapping:
+                    target = self._mapping[name]
+
+                    if isinstance(target, (type, Callable)):
+                        args = self._call(target, name)
+                    else:
+                        args = target
 
             elif annotation.kind is inspect.Parameter.VAR_KEYWORD:
-                if name in self._instances:
-                    kwargs = self._instances[name]
-                elif name in self._factories:
-                    kwargs = self._call(self._factories[name], name)
+                if name in self._mapping:
+                    target = self._mapping[name]
 
-            elif name in self._instances:
-                argument_dict[name] = self._instances[name]
+                    if isinstance(target, (type, Callable)):
+                        kwargs = self._call(target, name)
+                    else:
+                        kwargs = target
 
-            elif name in self._factories:
-                argument_dict[name] = self._call(self._factories[name], name)
+            elif name in self._mapping:
+                target = self._mapping[name]
+
+                if isinstance(target, (type, Callable)):
+                    argument_dict[name] = self._call(target, name)
+                else:
+                    argument_dict[name] = target
 
             elif annotation.default is not inspect.Parameter.empty:
                 argument_dict[name] = annotation.default
