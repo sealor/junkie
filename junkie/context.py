@@ -16,9 +16,9 @@ class Context:
 
         self._stack = None
 
-        self.add(*instances_and_factories_args)
+        self._add(*instances_and_factories_args)
 
-    def add(self, *instances_and_factories_args: Union[Dict[str, object], Dict[str, Callable], None]):
+    def _add(self, *instances_and_factories_args: Union[Dict[str, object], Dict[str, Callable], None]):
         for instances_and_factories in instances_and_factories_args:
             if instances_and_factories is None:
                 continue

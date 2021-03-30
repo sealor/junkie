@@ -12,17 +12,15 @@ from junkie.context import Context
 
 class ContextTest(unittest.TestCase):
     def test_resolve_instance_by_name(self):
-        context = Context()
-        context.add({"text": "abc"})
+        mapping = {"text": "abc"}
 
-        with context.build_element("text") as instance:
+        with Context(mapping).build_element("text") as instance:
             self.assertEqual("abc", instance)
 
     def test_resolve_instance_with_factory_by_name(self):
-        context = Context()
-        context.add({"text": lambda: "abc"})
+        mapping = {"text": lambda: "abc"}
 
-        with context.build_element("text") as instance:
+        with Context(mapping).build_element("text") as instance:
             self.assertEqual("abc", instance)
 
     def test_context_add_build(self):
@@ -30,31 +28,20 @@ class ContextTest(unittest.TestCase):
             def __init__(self, prefix, suffix):
                 self.text = prefix + suffix
 
-        context = Context({
+        mapping = {
             "prefix": "abc",
             "suffix": "def",
             "text": lambda prefix, suffix: prefix + suffix
-        })
-        context.add(
-            {"class": Class},
-            {"suffix": "xyz"}
-        )
+        }
+        mapping.update({"class": Class})
+        mapping.update({"suffix": "xyz"})
 
-        with context.build("class") as instance:
+        with Context(mapping).build("class") as instance:
             self.assertEqual("abcxyz", instance.text)
 
-    def test_add_none_context(self):
-        context = Context({"value": "abc"}, None)
-        context.add(None)
-
-        with context.build("value") as value:
-            self.assertEqual("abc", value)
-
     def test_raise_exception_if_instance_name_is_unknown(self):
-        context = Context()
-
         with self.assertRaises(Exception) as exception_context:
-            with context.build_element("instance_name"):
+            with Context().build_element("instance_name"):
                 pass
 
         self.assertEqual("Not found: instance_name", str(exception_context.exception))
@@ -64,34 +51,34 @@ class ContextTest(unittest.TestCase):
             def __init__(self, text: str):
                 self.text = text
 
-        context = Context()
-        context.add({"text": "abc"})
+        mapping = dict()
+        mapping.update({"text": "abc"})
 
-        with context.build_element(AppClass) as instance:
+        with Context(mapping).build_element(AppClass) as instance:
             self.assertEqual("abc", instance.text)
 
     def test_resolve_instance_with_factory_using_two_instances(self):
-        context = Context()
-        context.add({"prefix": "abc", "suffix": "def"})
-        context.add({"text": lambda prefix, suffix: prefix + suffix})
+        mapping = dict()
+        mapping.update({"prefix": "abc", "suffix": "def"})
+        mapping.update({"text": lambda prefix, suffix: prefix + suffix})
 
-        with context.build_element("text") as text:
+        with Context(mapping).build_element("text") as text:
             self.assertEqual("abcdef", text)
 
     def test_resolve_instance_tuple(self):
-        context = Context()
-        context.add({"prefix": "abc", "suffix": "def"})
-        context.add({"text": lambda prefix, suffix: prefix + suffix})
+        mapping = dict()
+        mapping.update({"prefix": "abc", "suffix": "def"})
+        mapping.update({"text": lambda prefix, suffix: prefix + suffix})
 
-        with context.build_tuple(("prefix", "suffix", "text")) as instance_tuple:
+        with Context(mapping).build_tuple(("prefix", "suffix", "text")) as instance_tuple:
             self.assertEqual(("abc", "def", "abcdef"), instance_tuple)
 
     def test_resolve_instance_args(self):
-        context = Context()
-        context.add({"prefix": "abc", "suffix": "def"})
-        context.add({"text": lambda prefix, suffix: prefix + suffix})
+        mapping = dict()
+        mapping.update({"prefix": "abc", "suffix": "def"})
+        mapping.update({"text": lambda prefix, suffix: prefix + suffix})
 
-        with context.build_tuple("prefix", "suffix", "text") as (prefix, suffix, text):
+        with Context(mapping).build_tuple("prefix", "suffix", "text") as (prefix, suffix, text):
             self.assertEqual(("abc", "def", "abcdef"), (prefix, suffix, text))
 
     def test_resolve_tuple_with_correct_order(self):
@@ -103,14 +90,14 @@ class ContextTest(unittest.TestCase):
             return factory_func
 
         test_logger = []
-        context = Context()
-        context.add({"a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e")})
-        context.add({"logger": test_logger})
+        mapping = dict()
+        mapping.update({"a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e")})
+        mapping.update({"logger": test_logger})
 
         names = ["a", "b", "c", "d", "e"]
         random.shuffle(names)
 
-        with context.build_tuple(tuple(names)):
+        with Context(mapping).build_tuple(tuple(names)):
             self.assertEqual(names, test_logger)
 
     def test_default_argument_usage(self):
@@ -120,10 +107,9 @@ class ContextTest(unittest.TestCase):
                 self.default_argument = default_argument
                 self.default_argument2 = default_argument2 or "Hello"
 
-        core_context = Context()
-        core_context.add({"argument": "value"})
+        mapping = {"argument": "value"}
 
-        with core_context.build_element(MyClassWithDefaultArguments) as instance:
+        with Context(mapping).build_element(MyClassWithDefaultArguments) as instance:
             self.assertEqual("value", instance.argument)
             self.assertEqual(10, instance.default_argument)
             self.assertEqual("Hello", instance.default_argument2)
@@ -135,10 +121,9 @@ class ContextTest(unittest.TestCase):
                 self.default_argument = default_argument
                 self.default_argument2 = default_argument2 or "Hello"
 
-        core_context = Context()
-        core_context.add({"argument": "value", "default_argument2": "set from context"})
+        mapping = {"argument": "value", "default_argument2": "set from context"}
 
-        with core_context.build_element(MyClassWithDefaultArguments) as instance:
+        with Context(mapping).build_element(MyClassWithDefaultArguments) as instance:
             self.assertEqual("value", instance.argument)
             self.assertEqual(10, instance.default_argument)
             self.assertEqual("set from context", instance.default_argument2)
@@ -148,8 +133,7 @@ class ContextTest(unittest.TestCase):
             def __init__(self, **kwargs):
                 self.kwargs = kwargs
 
-        core_context = Context()
-        with core_context.build_element(MyClassWithKwargs) as instance:
+        with Context().build_element(MyClassWithKwargs) as instance:
             self.assertEqual({}, instance.kwargs)
 
     def test_kwargs_usage_with_dictionary(self):
@@ -157,10 +141,9 @@ class ContextTest(unittest.TestCase):
             def __init__(self, **my_vars):
                 self.my_vars = my_vars
 
-        core_context = Context()
-        core_context.add({"my_vars": {"a": "a"}})
+        mapping = {"my_vars": {"a": "a"}}
 
-        with core_context.build_element(MyClassWithKwargs) as instance:
+        with Context(mapping).build_element(MyClassWithKwargs) as instance:
             self.assertEqual({"a": "a"}, instance.my_vars)
 
     def test_kwargs_usage_with_factory_function(self):
@@ -171,10 +154,9 @@ class ContextTest(unittest.TestCase):
         def create_kwargs():
             return {"a": "a"}
 
-        core_context = Context()
-        core_context.add({"my_vars": create_kwargs})
+        mapping = {"my_vars": create_kwargs}
 
-        with core_context.build_element(MyClassWithKwargs) as instance:
+        with Context(mapping).build_element(MyClassWithKwargs) as instance:
             self.assertEqual({"a": "a"}, instance.my_vars)
 
     def test_context_manager_enter_and_exit(self):
@@ -201,11 +183,11 @@ class ContextTest(unittest.TestCase):
             logger.append("close")
 
         test_logger = list()
-        context = Context()
-        context.add({"logger": test_logger})
-        context.add({"message_service": MessageService, "database_context": create_database})
+        mapping = dict()
+        mapping.update({"logger": test_logger})
+        mapping.update({"message_service": MessageService, "database_context": create_database})
 
-        with context.build_element(Class) as instance:
+        with Context(mapping).build_element(Class) as instance:
             self.assertEqual(MessageService, type(instance.message_service))
             self.assertEqual("DB", instance.database_context)
 
@@ -248,9 +230,9 @@ class ContextTest(unittest.TestCase):
         def create_message_service():
             yield "message-service"
 
-        context = Context()
-        context.add({"text": "abc"})
-        context.add({
+        mapping = dict()
+        mapping.update({"text": "abc"})
+        mapping.update({
             "connection_string": lambda: "URL",
             "database_context": create_database,
             "message_service": create_message_service,
@@ -258,7 +240,7 @@ class ContextTest(unittest.TestCase):
         })
 
         with self.assertLogs(level="DEBUG") as logging_context:
-            with context.build_element("class"):
+            with Context(mapping).build_element("class"):
                 logging.getLogger(__name__).info("execute context block")
 
         self.assertEqual([
