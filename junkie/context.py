@@ -10,85 +10,85 @@ import junkie
 class Context:
     def __init__(self, instances_and_factories: Mapping[str, Any] = None):
         self._mapping = instances_and_factories or {}
-        self._stack = None
+        self._exit_stack = None
 
         self.logger = logging.getLogger(junkie.__name__)
 
     @contextmanager
-    def build(self, *names_and_types: Union[str, type, Callable]) -> Union[object, Tuple[object]]:
-        with ExitStack() as self._stack:
-            if len(names_and_types) == 1:
-                self.logger.debug("build(%r)", names_and_types[0])
-                yield self._build_element(names_and_types[0])
+    def build(self, *names_and_factories: Union[str, type, Callable]) -> Union[object, Tuple[object]]:
+        with ExitStack() as self._exit_stack:
+            if len(names_and_factories) == 1:
+                self.logger.debug("build(%r)", names_and_factories[0])
+                yield self._build_element(names_and_factories[0])
             else:
-                self.logger.debug("build(%r)", names_and_types)
-                yield self._build_tuple(*names_and_types)
+                self.logger.debug("build(%r)", names_and_factories)
+                yield self._build_tuple(*names_and_factories)
 
-    def _build_tuple(self, *names_and_types: Union[str, type, Callable]) -> Union[object, Tuple[object]]:
+    def _build_tuple(self, *names_and_factories: Union[str, type, Callable]) -> Union[object, Tuple[object]]:
         instances = []
 
-        for name_or_type in names_and_types:
-            instance = self._build_element(name_or_type)
+        for name_or_factory in names_and_factories:
+            instance = self._build_element(name_or_factory)
             instances.append(instance)
 
         return tuple(instances)
 
-    def _build_element(self, name_or_type: Union[str, type, Callable]) -> object:
-        if isinstance(name_or_type, str):
-            return self._build_by_name(name_or_type)
+    def _build_element(self, name_or_factory: Union[str, type, Callable]) -> object:
+        if isinstance(name_or_factory, str):
+            return self._build_by_instance_name(name_or_factory)
 
-        elif isinstance(name_or_type, (type, Callable)):
-            return self._build_by_type(name_or_type, name_or_type.__name__)
+        elif isinstance(name_or_factory, (type, Callable)):
+            return self._build_by_factory_function(name_or_factory, name_or_factory.__name__)
 
-        raise RuntimeError("Unknown type '{}' - str, type or Callable expected".format(name_or_type))
+        raise RuntimeError("Unknown type '{}' - str, type or Callable expected".format(name_or_factory))
 
-    def _build_by_name(self, name: str, default=None) -> object:
-        if name in self._mapping:
-            value = self._mapping[name]
+    def _build_by_instance_name(self, instance_name: str, default=None) -> object:
+        if instance_name in self._mapping:
+            value = self._mapping[instance_name]
 
             if isinstance(value, (type, Callable)):
-                return self._build_by_type(value, name)
+                return self._build_by_factory_function(value, instance_name)
             else:
                 return value
 
         if default is not None:
             return default
 
-        raise RuntimeError("Not found: " + name)
+        raise RuntimeError("Not found: " + instance_name)
 
-    def _build_by_type(self, factory_func: Union[type, Callable], instance_name: str) -> object:
-        parameters, args, kwargs = self._build_parameters(factory_func)
+    def _build_by_factory_function(self, factory_function: Union[type, Callable], instance_name: str) -> object:
+        parameters, args, kwargs = self._build_parameters(factory_function)
 
-        self.logger.debug("%s = %s(%s)", instance_name, factory_func.__name__, list(parameters.keys()))
-        instance = factory_func(*parameters.values(), *args, **kwargs)
+        self.logger.debug("%s = %s(%s)", instance_name, factory_function.__name__, list(parameters.keys()))
+        instance = factory_function(*parameters.values(), *args, **kwargs)
 
         if hasattr(instance, "__enter__"):
             self.logger.debug("%s.__enter__()", instance_name)
-            self._stack.push(lambda *exception_details: self.logger.debug("%s.__exit__()", instance_name))
+            self._exit_stack.push(lambda *exception_details: self.logger.debug("%s.__exit__()", instance_name))
 
-            instance = self._stack.enter_context(instance)
+            instance = self._exit_stack.enter_context(instance)
 
         return instance
 
-    def _build_parameters(self, factory_func: Union[type, Callable]) -> (OrderedDict, tuple, dict):
-        argument_dict = OrderedDict()
+    def _build_parameters(self, factory_function: Union[type, Callable]) -> (OrderedDict, tuple, dict):
+        parameters = OrderedDict()
         args = ()
         kwargs = {}
 
-        for name, annotation in inspect.signature(factory_func).parameters.items():
+        for instance_name, annotation in inspect.signature(factory_function).parameters.items():
             if annotation.kind is inspect.Parameter.VAR_POSITIONAL:
-                args = self._build_by_name(name, args)
+                args = self._build_by_instance_name(instance_name, args)
 
             elif annotation.kind is inspect.Parameter.VAR_KEYWORD:
-                kwargs = self._build_by_name(name, kwargs)
+                kwargs = self._build_by_instance_name(instance_name, kwargs)
 
-            elif name in self._mapping:
-                argument_dict[name] = self._build_by_name(name)
+            elif instance_name in self._mapping:
+                parameters[instance_name] = self._build_by_instance_name(instance_name)
 
             elif annotation.default is not inspect.Parameter.empty:
-                argument_dict[name] = annotation.default
+                parameters[instance_name] = annotation.default
 
             else:
-                raise RuntimeError("Not found: " + name)
+                raise RuntimeError("Not found: " + instance_name)
 
-        return argument_dict, args, kwargs
+        return parameters, args, kwargs
