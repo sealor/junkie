@@ -65,13 +65,24 @@ class ContextTest(unittest.TestCase):
         with Context(mapping).build("text") as text:
             self.assertEqual("abcdef", text)
 
-    def test_resolve_instance_args(self):
+    def test_resolve_instance_parameters(self):
         mapping = dict()
         mapping.update({"prefix": "abc", "suffix": "def"})
         mapping.update({"text": lambda prefix, suffix: prefix + suffix})
 
         with Context(mapping).build("prefix", "suffix", "text") as (prefix, suffix, text):
             self.assertEqual(("abc", "def", "abcdef"), (prefix, suffix, text))
+
+    def test_resolve_None_as_parameter(self):
+        class Class:
+            def __init__(self, empty):
+                self.empty = empty
+
+        mapping = {"empty": None, "class": Class}
+
+        with Context(mapping).build("empty", "class") as (empty_value, class_value):
+            self.assertIsNone(empty_value)
+            self.assertIsNone(class_value.empty)
 
     def test_resolve_tuple_with_correct_order(self):
         def func(letter):
@@ -120,6 +131,44 @@ class ContextTest(unittest.TestCase):
             self.assertEqual(10, instance.default_argument)
             self.assertEqual("set from context", instance.default_argument2)
 
+    def test_empty_args_usage(self):
+        class MyClassWithKwargs:
+            def __init__(self, *args):
+                self.args = args
+
+        with Context().build(MyClassWithKwargs) as instance:
+            self.assertEqual((), instance.args)
+
+    def test_args_usage_with_tuple(self):
+        class MyClassWithKwargs:
+            def __init__(self, *my_tuple):
+                self.my_tuple = my_tuple
+
+        mapping = {"my_tuple": (1, 2, 3)}
+
+        with Context(mapping).build(MyClassWithKwargs) as instance:
+            self.assertEqual((1, 2, 3), instance.my_tuple)
+
+    def test_args_usage_with_list_as_tuple_input(self):
+        class MyClassWithKwargs:
+            def __init__(self, *my_tuple):
+                self.my_tuple = my_tuple
+
+        mapping = {"my_tuple": [1, 2, 3]}
+
+        with Context(mapping).build(MyClassWithKwargs) as instance:
+            self.assertEqual((1, 2, 3), instance.my_tuple)
+
+    def test_args_usage_with_factory_function(self):
+        class MyClassWithKwargs:
+            def __init__(self, *my_tuple):
+                self.my_tuple = my_tuple
+
+        mapping = {"my_tuple": lambda: (1, 2, 3)}
+
+        with Context(mapping).build(MyClassWithKwargs) as instance:
+            self.assertEqual((1, 2, 3), instance.my_tuple)
+
     def test_empty_kwargs_usage(self):
         class MyClassWithKwargs:
             def __init__(self, **kwargs):
@@ -143,10 +192,7 @@ class ContextTest(unittest.TestCase):
             def __init__(self, **my_vars):
                 self.my_vars = my_vars
 
-        def create_kwargs():
-            return {"a": "a"}
-
-        mapping = {"my_vars": create_kwargs}
+        mapping = {"my_vars": lambda: {"a": "a"}}
 
         with Context(mapping).build(MyClassWithKwargs) as instance:
             self.assertEqual({"a": "a"}, instance.my_vars)
