@@ -3,7 +3,7 @@ import unittest
 
 class ReadmeTest(unittest.TestCase):
     def test_example(self):
-        from junkie import Context
+        from junkie import Junkie
 
         class App:
             def __init__(self, text: str):
@@ -12,11 +12,11 @@ class ReadmeTest(unittest.TestCase):
             def greets(self) -> str:
                 return self.text
 
-        context = Context({
+        context = Junkie({
             "greeting": "Hello",
             "name": "Joe",
             "text": lambda greeting, name: "{} {}!".format(greeting, name)
         })
 
-        with context.build(App) as app:
+        with context.inject(App) as app:
             assert app.greets() == "Hello Joe!"

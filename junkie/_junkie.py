@@ -7,7 +7,7 @@ from typing import Union, Tuple, Mapping, Any, Callable
 import junkie
 
 
-class Context:
+class Junkie:
     def __init__(self, instances_and_factories: Mapping[str, Any] = None):
         self._mapping = instances_and_factories or {}
         self._exit_stack = None
@@ -15,25 +15,25 @@ class Context:
         self.logger = logging.getLogger(junkie.__name__)
 
     @contextmanager
-    def build(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
+    def inject(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
         with ExitStack() as self._exit_stack:
             if len(names_and_factories) == 1:
-                self.logger.debug("build(%r)", names_and_factories[0])
-                yield self._build_element(names_and_factories[0])
+                self.logger.debug("inject(%r)", names_and_factories[0])
+                yield self._build_instance(names_and_factories[0])
             else:
-                self.logger.debug("build(%r)", names_and_factories)
+                self.logger.debug("inject(%r)", names_and_factories)
                 yield self._build_tuple(*names_and_factories)
 
     def _build_tuple(self, *names_and_factories: Union[str, Callable]) -> Tuple[Any]:
         instances = []
 
         for name_or_factory in names_and_factories:
-            instance = self._build_element(name_or_factory)
+            instance = self._build_instance(name_or_factory)
             instances.append(instance)
 
         return tuple(instances)
 
-    def _build_element(self, name_or_factory: Union[str, Callable]) -> Any:
+    def _build_instance(self, name_or_factory: Union[str, Callable]) -> Any:
         if isinstance(name_or_factory, str):
             return self._build_by_instance_name(name_or_factory)
 
