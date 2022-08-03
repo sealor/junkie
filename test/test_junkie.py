@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from unittest import skipIf
 
 import junkie
-from junkie.context import Context
+from junkie._junkie import Context
 
 
 class ContextTest(unittest.TestCase):
