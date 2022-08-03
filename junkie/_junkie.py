@@ -92,6 +92,9 @@ class Junkie:
             elif annotation.default is not inspect.Parameter.empty:
                 parameters[instance_name] = annotation.default
 
+            elif isinstance(annotation.annotation, Callable):
+                parameters[instance_name] = self._build_by_factory_function(annotation.annotation, instance_name)
+
             else:
                 raise JunkieError(
                     'Unable to find "{}" for "{}"'.format(instance_name, factory_function.__name__)
