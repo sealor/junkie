@@ -1,1 +1,1 @@
-from junkie._junkie import Junkie
+from junkie._junkie import Junkie, JunkieError

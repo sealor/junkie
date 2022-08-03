@@ -7,6 +7,10 @@ from typing import Union, Tuple, Mapping, Any, Callable
 import junkie
 
 
+class JunkieError(RuntimeError):
+    pass
+
+
 class Junkie:
     def __init__(self, instances_and_factories: Mapping[str, Any] = None):
         self._mapping = instances_and_factories or {}
@@ -40,7 +44,7 @@ class Junkie:
         elif callable(name_or_factory):
             return self._build_by_factory_function(name_or_factory, name_or_factory.__name__)
 
-        raise RuntimeError("Unknown type '{}' - str, type or Callable expected".format(name_or_factory))
+        raise JunkieError('Unknown type "{}" (str, type or Callable expected)'.format(name_or_factory))
 
     def _build_by_instance_name(self, instance_name: str, default=None) -> Any:
         if instance_name in self._mapping:
@@ -54,7 +58,7 @@ class Junkie:
         if default is not None:
             return default
 
-        raise RuntimeError("Not found: " + instance_name)
+        raise JunkieError('Unable to find "{}"'.format(instance_name))
 
     def _build_by_factory_function(self, factory_function: Callable, instance_name: str) -> Any:
         parameters, args, kwargs = self._build_parameters(factory_function)
@@ -89,6 +93,8 @@ class Junkie:
                 parameters[instance_name] = annotation.default
 
             else:
-                raise RuntimeError("Not found: " + instance_name)
+                raise JunkieError(
+                    'Unable to find "{}" for "{}"'.format(instance_name, factory_function.__name__)
+                )
 
         return parameters, args, kwargs

@@ -44,7 +44,7 @@ class JunkieTest(unittest.TestCase):
             with Junkie().inject("instance_name"):
                 pass
 
-        self.assertEqual("Not found: instance_name", str(exception_context.exception))
+        self.assertEqual('Unable to find "instance_name"', str(exception_context.exception))
 
     def test_resolve_instance_with_factory_by_type(self):
         class AppClass:
@@ -250,6 +250,14 @@ class JunkieTest(unittest.TestCase):
             with Junkie({"prefix": "abc", "suffix": "def"}).inject(Class) as instance:
                 self.assertEqual("abcdef", instance.text)
         """))
+
+    def test_unknown_type_exception(self):
+        with self.assertRaises(RuntimeError) as error:
+            # noinspection PyTypeChecker
+            with Junkie({}).inject(1):
+                pass
+
+        self.assertEqual('Unknown type "1" (str, type or Callable expected)', str(error.exception))
 
     def test_logging(self):
         self.maxDiff = None
