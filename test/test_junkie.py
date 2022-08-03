@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from unittest import skipIf
 
 import junkie
-from junkie._junkie import Junkie
+from junkie import Junkie
 
 
 class JunkieTest(unittest.TestCase):
@@ -51,14 +51,14 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, text: str):
                 self.text = text
 
-        mapping = dict()
+        mapping = {}
         mapping.update({"text": "abc"})
 
         with Junkie(mapping).inject(AppClass) as instance:
             self.assertEqual("abc", instance.text)
 
     def test_resolve_instance_with_factory_using_two_instances(self):
-        mapping = dict()
+        mapping = {}
         mapping.update({"prefix": "abc", "suffix": "def"})
         mapping.update({"text": lambda prefix, suffix: prefix + suffix})
 
@@ -66,12 +66,12 @@ class JunkieTest(unittest.TestCase):
             self.assertEqual("abcdef", text)
 
     def test_resolve_instance_parameters(self):
-        mapping = dict()
+        mapping = {}
         mapping.update({"prefix": "abc", "suffix": "def"})
         mapping.update({"text": lambda prefix, suffix: prefix + suffix})
 
-        with Junkie(mapping).inject("prefix", "suffix", "text") as (prefix, suffix, text):
-            self.assertEqual(("abc", "def", "abcdef"), (prefix, suffix, text))
+        with Junkie(mapping).inject("prefix", "suffix", "text") as (my_prefix, my_suffix, text):
+            self.assertEqual(("abc", "def", "abcdef"), (my_prefix, my_suffix, text))
 
     def test_resolve_None_as_parameter(self):
         class Class:
@@ -93,7 +93,7 @@ class JunkieTest(unittest.TestCase):
             return factory_func
 
         test_logger = []
-        mapping = dict()
+        mapping = {}
         mapping.update({"a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e")})
         mapping.update({"logger": test_logger})
 
@@ -220,8 +220,8 @@ class JunkieTest(unittest.TestCase):
             yield "DB"
             logger.append("close")
 
-        test_logger = list()
-        mapping = dict()
+        test_logger = []
+        mapping = {}
         mapping.update({"logger": test_logger})
         mapping.update({"message_service": MessageService, "database_context": create_database})
 
@@ -268,7 +268,7 @@ class JunkieTest(unittest.TestCase):
         def create_message_service():
             yield "message-service"
 
-        mapping = dict()
+        mapping = {}
         mapping.update({"text": "abc"})
         mapping.update({
             "connection_string": lambda: "URL",
