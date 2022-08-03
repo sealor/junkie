@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from unittest import skipIf
 
 import junkie
-from junkie import Junkie
+from junkie import Junkie, JunkieError
 
 
 class JunkieTest(unittest.TestCase):
@@ -344,3 +344,19 @@ class JunkieTest(unittest.TestCase):
         with Junkie(context).inject(B) as b:
             self.assertIsInstance(b, B)
             self.assertEqual("from context", b.a)
+
+    def test_no_create_for_builtins(self):
+        with self.assertRaises(JunkieError) as error:
+            with Junkie().inject(dict):
+                pass
+
+    def test_no_auto_inject_for_builtins(self):
+        class B:
+            def __init__(self, a: str):
+                self.a = a
+
+        with self.assertRaises(JunkieError) as error:
+            with Junkie({}).inject(B):
+                pass
+
+        self.assertEqual('Mapping for "a" of builtin type "str" is missing', str(error.exception))
