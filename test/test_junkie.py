@@ -349,3 +349,70 @@ class JunkieTest(unittest.TestCase):
                 pass
 
         self.assertEqual('Mapping for "a" of builtin type "str" is missing', str(error.exception))
+
+    def test_object_is_persisted(self):
+        class A:
+            pass
+
+        context = {
+            "a": A,
+        }
+
+        _junkie = Junkie(context)
+        with _junkie.inject("a") as a1:
+            with _junkie.inject("a") as a2:
+                with _junkie.inject("a") as a3:
+                    self.assertIs(a1, a2)
+                    self.assertIs(a1, a3)
+
+    def test_resolve_instance_per_context_key(self):
+        class A:
+            pass
+
+        context = {
+            "a": A,
+            "b": A,
+        }
+
+        _junkie = Junkie(context)
+        with _junkie.inject("a", "b") as (a1, b1):
+            with _junkie.inject("a", "b") as (a2, b2):
+                self.assertIsNot(a1, b1)
+                self.assertIsNot(a2, b2)
+                self.assertIs(a1, a2)
+                self.assertIs(b1, b2)
+
+    def test_type_as_key_in_mapping_is_ignored(self):
+        class A:
+            pass
+
+        context = {
+            A: "a",
+        }
+
+        # noinspection PyTypeChecker
+        with Junkie(context).inject(A) as a:
+            self.assertIsInstance(a, A)
+
+    def test_auto_inject_same_instance_by_name(self):
+        class A:
+            pass
+
+        class A1:
+            pass
+
+        class B:
+            def __init__(self, a: A):
+                self.a = a
+
+        class C:
+            def __init__(self, a: A1):
+                self.a = a
+
+        with Junkie().inject(B, C) as (b, c):
+            self.assertIs(b.a, c.a)
+            self.assertIsInstance(b.a, A)
+
+        with Junkie().inject(C, B) as (c, b):
+            self.assertIs(b.a, c.a)
+            self.assertIsInstance(b.a, A1)

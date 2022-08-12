@@ -18,18 +18,25 @@ class Junkie:
     def __init__(self, instances_and_factories: Mapping[str, Any] = None):
         self._mapping = instances_and_factories or {}
         self._exit_stack = None
+        self._instances_by_name = None
+        self._instances_by_name_stack = [{}]
 
         self.logger = logging.getLogger(junkie.__name__)
 
     @contextmanager
     def inject(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
         with ExitStack() as self._exit_stack:
+            self._instances_by_name = self._instances_by_name_stack[-1].copy()
+            self._instances_by_name_stack.append(self._instances_by_name)
+
             if len(names_and_factories) == 1:
                 self.logger.debug("inject(%r)", names_and_factories[0])
                 yield self._build_instance(names_and_factories[0])
             else:
                 self.logger.debug("inject(%r)", names_and_factories)
                 yield self._build_tuple(*names_and_factories)
+
+            self._instances_by_name_stack.pop()
 
     def _build_tuple(self, *names_and_factories: Union[str, Callable]) -> Tuple[Any]:
         instances = []
@@ -45,11 +52,14 @@ class Junkie:
             return self._build_by_instance_name(name_or_factory)
 
         elif callable(name_or_factory):
-            return self._build_by_factory_function(name_or_factory, name_or_factory.__name__)
+            return self._build_by_factory_function(name_or_factory, None)
 
         raise JunkieError('Unknown type "{}" (str, type or Callable expected)'.format(name_or_factory))
 
     def _build_by_instance_name(self, instance_name: str, default=None) -> Any:
+        if instance_name in self._instances_by_name:
+            return self._instances_by_name[instance_name]
+
         if instance_name in self._mapping:
             value = self._mapping[instance_name]
 
@@ -63,7 +73,7 @@ class Junkie:
 
         raise JunkieError('Unable to find "{}"'.format(instance_name))
 
-    def _build_by_factory_function(self, factory_function: Callable, instance_name: str) -> Any:
+    def _build_by_factory_function(self, factory_function: Callable, instance_name: Union[str, None]) -> Any:
         if factory_function in BUILTINS:
             raise JunkieError(
                 'Mapping for "{}" of builtin type "{}" is missing'.format(instance_name, factory_function.__name__))
@@ -79,6 +89,9 @@ class Junkie:
 
             instance = self._exit_stack.enter_context(instance)
 
+        if instance_name is not None:
+            self._instances_by_name[instance_name] = instance
+
         return instance
 
     def _build_parameters(self, factory_function: Callable) -> (OrderedDict, tuple, dict):
@@ -92,6 +105,9 @@ class Junkie:
 
             elif annotation.kind is inspect.Parameter.VAR_KEYWORD:
                 kwargs = self._build_by_instance_name(instance_name, kwargs)
+
+            elif instance_name in self._instances_by_name:
+                parameters[instance_name] = self._instances_by_name[instance_name]
 
             elif instance_name in self._mapping:
                 parameters[instance_name] = self._build_by_instance_name(instance_name)
