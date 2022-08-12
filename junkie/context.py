@@ -2,7 +2,7 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Callable, Tuple, Mapping, Any
+from typing import Union, Tuple, Mapping, Any, Callable
 
 import junkie
 
@@ -15,7 +15,7 @@ class Context:
         self.logger = logging.getLogger(junkie.__name__)
 
     @contextmanager
-    def build(self, *names_and_factories: Union[str, type, Callable]) -> Union[object, Tuple[object]]:
+    def build(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
         with ExitStack() as self._exit_stack:
             if len(names_and_factories) == 1:
                 self.logger.debug("build(%r)", names_and_factories[0])
@@ -24,7 +24,7 @@ class Context:
                 self.logger.debug("build(%r)", names_and_factories)
                 yield self._build_tuple(*names_and_factories)
 
-    def _build_tuple(self, *names_and_factories: Union[str, type, Callable]) -> Union[object, Tuple[object]]:
+    def _build_tuple(self, *names_and_factories: Union[str, Callable]) -> Tuple[Any]:
         instances = []
 
         for name_or_factory in names_and_factories:
@@ -33,20 +33,20 @@ class Context:
 
         return tuple(instances)
 
-    def _build_element(self, name_or_factory: Union[str, type, Callable]) -> object:
+    def _build_element(self, name_or_factory: Union[str, Callable]) -> Any:
         if isinstance(name_or_factory, str):
             return self._build_by_instance_name(name_or_factory)
 
-        elif isinstance(name_or_factory, (type, Callable)):
+        elif callable(name_or_factory):
             return self._build_by_factory_function(name_or_factory, name_or_factory.__name__)
 
         raise RuntimeError("Unknown type '{}' - str, type or Callable expected".format(name_or_factory))
 
-    def _build_by_instance_name(self, instance_name: str, default=None) -> object:
+    def _build_by_instance_name(self, instance_name: str, default=None) -> Any:
         if instance_name in self._mapping:
             value = self._mapping[instance_name]
 
-            if isinstance(value, (type, Callable)):
+            if callable(value):
                 return self._build_by_factory_function(value, instance_name)
             else:
                 return value
@@ -56,7 +56,7 @@ class Context:
 
         raise RuntimeError("Not found: " + instance_name)
 
-    def _build_by_factory_function(self, factory_function: Union[type, Callable], instance_name: str) -> object:
+    def _build_by_factory_function(self, factory_function: Callable, instance_name: str) -> Any:
         parameters, args, kwargs = self._build_parameters(factory_function)
 
         self.logger.debug("%s = %s(%s)", instance_name, factory_function.__name__, list(parameters.keys()))
@@ -70,7 +70,7 @@ class Context:
 
         return instance
 
-    def _build_parameters(self, factory_function: Union[type, Callable]) -> (OrderedDict, tuple, dict):
+    def _build_parameters(self, factory_function: Callable) -> (OrderedDict, tuple, dict):
         parameters = OrderedDict()
         args = ()
         kwargs = {}
