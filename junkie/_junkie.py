@@ -1,3 +1,4 @@
+import builtins
 import inspect
 import logging
 from collections import OrderedDict
@@ -5,6 +6,8 @@ from contextlib import contextmanager, ExitStack
 from typing import Union, Tuple, Mapping, Any, Callable
 
 import junkie
+
+BUILTINS = {item for item in vars(builtins).values() if isinstance(item, type)}
 
 
 class JunkieError(RuntimeError):
@@ -61,6 +64,10 @@ class Junkie:
         raise JunkieError('Unable to find "{}"'.format(instance_name))
 
     def _build_by_factory_function(self, factory_function: Callable, instance_name: str) -> Any:
+        if factory_function in BUILTINS:
+            raise JunkieError(
+                'Mapping for "{}" of builtin type "{}" is missing'.format(instance_name, factory_function.__name__))
+
         parameters, args, kwargs = self._build_parameters(factory_function)
 
         self.logger.debug("%s = %s(%s)", instance_name, factory_function.__name__, list(parameters.keys()))
@@ -91,6 +98,9 @@ class Junkie:
 
             elif annotation.default is not inspect.Parameter.empty:
                 parameters[instance_name] = annotation.default
+
+            elif isinstance(annotation.annotation, Callable):
+                parameters[instance_name] = self._build_by_factory_function(annotation.annotation, instance_name)
 
             else:
                 raise JunkieError(

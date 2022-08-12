@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from unittest import skipIf
 
 import junkie
-from junkie import Junkie
+from junkie import Junkie, JunkieError
 
 
 class JunkieTest(unittest.TestCase):
@@ -301,3 +301,62 @@ class JunkieTest(unittest.TestCase):
             "DEBUG:{}:message_service.__exit__()".format(junkie.__name__),
             "DEBUG:{}:database_context.__exit__()".format(junkie.__name__),
         ], logging_context.output)
+
+    def test_auto_inject(self):
+        class A:
+            pass
+
+        class B:
+            def __init__(self, a: A):
+                self.a = a
+
+        class C:
+            def __init__(self, b: B):
+                self.b = b
+
+        with Junkie({}).inject(C) as c_instance:
+            self.assertIsInstance(c_instance, C)
+            self.assertIsInstance(c_instance.b, B)
+            self.assertIsInstance(c_instance.b.a, A)
+
+    def test_no_auto_inject_for_default_arguments(self):
+        class A:
+            pass
+
+        class B:
+            def __init__(self, a: A = None):
+                self.a = a
+
+        with Junkie({}).inject(B) as b_instance:
+            self.assertIsInstance(b_instance, B)
+            self.assertIsNone(b_instance.a)
+
+    def test_auto_inject_prioritize_named_from_context(self):
+        class A:
+            pass
+
+        class B:
+            def __init__(self, a: A):
+                self.a = a
+
+        context = {"a": "from context"}
+
+        with Junkie(context).inject(B) as b:
+            self.assertIsInstance(b, B)
+            self.assertEqual("from context", b.a)
+
+    def test_no_create_for_builtins(self):
+        with self.assertRaises(JunkieError) as error:
+            with Junkie().inject(dict):
+                pass
+
+    def test_no_auto_inject_for_builtins(self):
+        class B:
+            def __init__(self, a: str):
+                self.a = a
+
+        with self.assertRaises(JunkieError) as error:
+            with Junkie({}).inject(B):
+                pass
+
+        self.assertEqual('Mapping for "a" of builtin type "str" is missing', str(error.exception))
