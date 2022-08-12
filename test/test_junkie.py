@@ -23,22 +23,6 @@ class JunkieTest(unittest.TestCase):
         with Junkie(mapping).inject("text") as instance:
             self.assertEqual("abc", instance)
 
-    def test_context_add_build(self):
-        class Class:
-            def __init__(self, prefix, suffix):
-                self.text = prefix + suffix
-
-        mapping = {
-            "prefix": "abc",
-            "suffix": "def",
-            "text": lambda prefix, suffix: prefix + suffix
-        }
-        mapping.update({"class": Class})
-        mapping.update({"suffix": "xyz"})
-
-        with Junkie(mapping).inject("class") as instance:
-            self.assertEqual("abcxyz", instance.text)
-
     def test_raise_exception_if_instance_name_is_unknown(self):
         with self.assertRaises(Exception) as exception_context:
             with Junkie().inject("instance_name"):
