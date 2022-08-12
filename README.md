@@ -13,7 +13,8 @@ Core features:
 Example:
 
 ```python
-from junkie import Context
+from junkie import Junkie
+
 
 class App:
     def __init__(self, text: str):
@@ -22,12 +23,13 @@ class App:
     def greets(self) -> str:
         return self.text
 
-context = Context({
+
+context = Junkie({
     "greeting": "Hello",
     "name": "Joe",
     "text": lambda greeting, name: f"{greeting} {name}!"
 })
 
-with context.build(App) as app:
+with context.inject(App) as app:
     assert app.greets() == "Hello Joe!"
 ```

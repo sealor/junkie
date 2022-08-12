@@ -1,1 +1,1 @@
-from junkie.context import Context
+from junkie._junkie import Junkie
