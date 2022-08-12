@@ -7,6 +7,7 @@ from typing import Union, Tuple, Mapping, Any, Callable
 
 import junkie
 
+LOGGER = logging.getLogger(junkie.__name__)
 BUILTINS = {item for item in vars(builtins).values() if isinstance(item, type)}
 
 
@@ -21,19 +22,17 @@ class Junkie:
         self._instances_by_name = None
         self._instances_by_name_stack = [{}]
 
-        self.logger = logging.getLogger(junkie.__name__)
-
     @contextmanager
     def inject(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
+        LOGGER.debug("inject(%s)", Junkie._LogParams(*names_and_factories))
+
         with ExitStack() as self._exit_stack:
             self._instances_by_name = self._instances_by_name_stack[-1].copy()
             self._instances_by_name_stack.append(self._instances_by_name)
 
             if len(names_and_factories) == 1:
-                self.logger.debug("inject(%r)", names_and_factories[0])
                 yield self._build_instance(names_and_factories[0])
             else:
-                self.logger.debug("inject(%r)", names_and_factories)
                 yield self._build_tuple(*names_and_factories)
 
             self._instances_by_name_stack.pop()
@@ -80,12 +79,13 @@ class Junkie:
 
         parameters, args, kwargs = self._build_parameters(factory_function)
 
-        self.logger.debug("%s = %s(%s)", instance_name, factory_function.__name__, list(parameters.keys()))
+        log_params = Junkie._LogParams(*parameters.keys(), *args, **kwargs)
+        LOGGER.debug("%s = %s(%s)", instance_name or "_", factory_function.__name__, log_params)
         instance = factory_function(*parameters.values(), *args, **kwargs)
 
         if hasattr(instance, "__enter__"):
-            self.logger.debug("%s.__enter__()", instance_name)
-            self._exit_stack.push(lambda *exception_details: self.logger.debug("%s.__exit__()", instance_name))
+            LOGGER.debug("%s.__enter__()", instance_name or "_")
+            self._exit_stack.push(lambda *exception_details: LOGGER.debug("%s.__exit__()", instance_name or "_"))
 
             instance = self._exit_stack.enter_context(instance)
 
@@ -124,3 +124,13 @@ class Junkie:
                 )
 
         return parameters, args, kwargs
+
+    class _LogParams:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+        def __str__(self):
+            arg_params = list(map(str, self.args))
+            kwarg_params = list(map(str, [f"{key}={repr(value)}" for key, value in self.kwargs.items()]))
+            return ", ".join(arg_params + kwarg_params)

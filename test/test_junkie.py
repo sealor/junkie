@@ -6,7 +6,6 @@ import unittest
 from contextlib import contextmanager
 from unittest import skipIf
 
-import junkie
 from junkie import Junkie, JunkieError
 
 
@@ -253,43 +252,45 @@ class JunkieTest(unittest.TestCase):
         self.maxDiff = None
 
         class Class:
-            def __init__(self, database_context, message_service, text):
+            def __init__(self, database_context, message_service, *args):
                 self.database_context = database_context
                 self.message_service = message_service
-                self.text = text
+                self.args = args
 
         @contextmanager
-        def create_database(connection_string):
-            yield "DB: " + connection_string
+        def create_database(connection_string, **kwargs):
+            yield "DB: " + connection_string + str(kwargs)
 
         @contextmanager
         def create_message_service():
             yield "message-service"
 
         context = {
-            "text": "abc",
             "connection_string": lambda: "URL",
             "database_context": create_database,
             "message_service": create_message_service,
             "class": Class,
+            "args": ["app_name"],
+            "kwargs": {"engine": "sqlite"},
         }
 
         with self.assertLogs(level="DEBUG") as logging_context:
-            with Junkie(context).inject("class"):
+            with Junkie(context).inject("class", Class):
                 logging.getLogger(__name__).info("execute context block")
 
-        self.assertEqual([
-            "DEBUG:{}:inject('class')".format(junkie.__name__),
-            "DEBUG:{}:connection_string = <lambda>([])".format(junkie.__name__),
-            "DEBUG:{}:database_context = create_database(['connection_string'])".format(junkie.__name__),
-            "DEBUG:{}:database_context.__enter__()".format(junkie.__name__),
-            "DEBUG:{}:message_service = create_message_service([])".format(junkie.__name__),
-            "DEBUG:{}:message_service.__enter__()".format(junkie.__name__),
-            "DEBUG:{}:class = Class(['database_context', 'message_service', 'text'])".format(junkie.__name__),
-            "INFO:{}:execute context block".format(__name__),
-            "DEBUG:{}:message_service.__exit__()".format(junkie.__name__),
-            "DEBUG:{}:database_context.__exit__()".format(junkie.__name__),
-        ], logging_context.output)
+        self.assertEqual((
+            "DEBUG:inject(class, <class 'test.test_junkie.JunkieTest.test_logging.<locals>.Class'>)\n"
+            "DEBUG:connection_string = <lambda>()\n"
+            "DEBUG:database_context = create_database(connection_string, engine='sqlite')\n"
+            "DEBUG:database_context.__enter__()\n"
+            "DEBUG:message_service = create_message_service()\n"
+            "DEBUG:message_service.__enter__()\n"
+            "DEBUG:class = Class(database_context, message_service, app_name)\n"
+            "DEBUG:_ = Class(database_context, message_service, app_name)\n"
+            "INFO:test.test_junkie:execute context block\n"
+            "DEBUG:message_service.__exit__()\n"
+            "DEBUG:database_context.__exit__()"
+        ), "\n".join(logging_context.output).replace(":junkie:", ":"))
 
     def test_auto_inject(self):
         class A:
