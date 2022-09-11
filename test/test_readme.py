@@ -6,17 +6,13 @@ class ReadmeTest(unittest.TestCase):
         from junkie import Junkie
 
         class App:
-            def __init__(self, text: str):
-                self.text = text
+            def __init__(self, addressee):
+                self.addressee = addressee
 
-            def greets(self) -> str:
-                return self.text
+            def greets(self):
+                return f"Hello {self.addressee}!"
 
-        context = Junkie({
-            "greeting": "Hello",
-            "name": "Joe",
-            "text": lambda greeting, name: "{} {}!".format(greeting, name)
-        })
+        context = {"addressee": "World"}
 
-        with context.inject(App) as app:
-            assert app.greets() == "Hello Joe!"
+        with Junkie(context).inject(App) as app:
+            assert app.greets() == "Hello World!"

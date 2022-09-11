@@ -8,7 +8,7 @@ setuptools.setup(
     version='3.0.0.dev4',
     packages=setuptools.find_packages(exclude="test"),
     author='Stefan Richter',
-    description='A dependency injection library for beginners',
+    description='A dependency injection library for beginners and professionals',
     url="https://github.com/sealor/junkie",
     long_description=long_description,
     long_description_content_type="text/markdown",
