@@ -12,15 +12,15 @@ from junkie import Junkie, JunkieError
 
 class JunkieTest(unittest.TestCase):
     def test_resolve_instance_by_name(self):
-        mapping = {"text": "abc"}
+        context = {"text": "abc"}
 
-        with Junkie(mapping).inject("text") as instance:
+        with Junkie(context).inject("text") as instance:
             self.assertEqual("abc", instance)
 
     def test_resolve_instance_with_factory_by_name(self):
-        mapping = {"text": lambda: "abc"}
+        context = {"text": lambda: "abc"}
 
-        with Junkie(mapping).inject("text") as instance:
+        with Junkie(context).inject("text") as instance:
             self.assertEqual("abc", instance)
 
     def test_raise_exception_if_instance_name_is_unknown(self):
@@ -35,36 +35,39 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, text: str):
                 self.text = text
 
-        mapping = {}
-        mapping.update({"text": "abc"})
+        context = {"text": "abc"}
 
-        with Junkie(mapping).inject(AppClass) as instance:
+        with Junkie(context).inject(AppClass) as instance:
             self.assertEqual("abc", instance.text)
 
     def test_resolve_instance_with_factory_using_two_instances(self):
-        mapping = {}
-        mapping.update({"prefix": "abc", "suffix": "def"})
-        mapping.update({"text": lambda prefix, suffix: prefix + suffix})
+        context = {
+            "prefix": "abc",
+            "suffix": "def",
+            "text": lambda prefix, suffix: prefix + " " + suffix
+        }
 
-        with Junkie(mapping).inject("text") as text:
-            self.assertEqual("abcdef", text)
+        with Junkie(context).inject("text") as text:
+            self.assertEqual("abc def", text)
 
     def test_resolve_instance_parameters(self):
-        mapping = {}
-        mapping.update({"prefix": "abc", "suffix": "def"})
-        mapping.update({"text": lambda prefix, suffix: prefix + suffix})
+        context = {
+            "prefix": "abc",
+            "suffix": "def",
+            "text": lambda prefix, suffix: prefix + " " + suffix
+        }
 
-        with Junkie(mapping).inject("prefix", "suffix", "text") as (my_prefix, my_suffix, text):
-            self.assertEqual(("abc", "def", "abcdef"), (my_prefix, my_suffix, text))
+        with Junkie(context).inject("prefix", "suffix", "text") as (my_prefix, my_suffix, text):
+            self.assertEqual(("abc", "def", "abc def"), (my_prefix, my_suffix, text))
 
     def test_resolve_None_as_parameter(self):
         class Class:
             def __init__(self, empty):
                 self.empty = empty
 
-        mapping = {"empty": None, "class": Class}
+        context = {"empty": None, "class": Class}
 
-        with Junkie(mapping).inject("empty", "class") as (empty_value, class_value):
+        with Junkie(context).inject("empty", "class") as (empty_value, class_value):
             self.assertIsNone(empty_value)
             self.assertIsNone(class_value.empty)
 
@@ -77,14 +80,15 @@ class JunkieTest(unittest.TestCase):
             return factory_func
 
         test_logger = []
-        mapping = {}
-        mapping.update({"a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e")})
-        mapping.update({"logger": test_logger})
+        context = {
+            "a": func("a"), "b": func("b"), "c": func("c"), "d": func("d"), "e": func("e"),
+            "logger": test_logger
+        }
 
         names = ["a", "b", "c", "d", "e"]
         random.shuffle(names)
 
-        with Junkie(mapping).inject(*names):
+        with Junkie(context).inject(*names):
             self.assertEqual(names, test_logger)
 
     def test_default_argument_usage(self):
@@ -94,9 +98,9 @@ class JunkieTest(unittest.TestCase):
                 self.default_argument = default_argument
                 self.default_argument2 = default_argument2 or "Hello"
 
-        mapping = {"argument": "value"}
+        context = {"argument": "value"}
 
-        with Junkie(mapping).inject(MyClassWithDefaultArguments) as instance:
+        with Junkie(context).inject(MyClassWithDefaultArguments) as instance:
             self.assertEqual("value", instance.argument)
             self.assertEqual(10, instance.default_argument)
             self.assertEqual("Hello", instance.default_argument2)
@@ -108,9 +112,9 @@ class JunkieTest(unittest.TestCase):
                 self.default_argument = default_argument
                 self.default_argument2 = default_argument2 or "Hello"
 
-        mapping = {"argument": "value", "default_argument2": "set from context"}
+        context = {"argument": "value", "default_argument2": "set from context"}
 
-        with Junkie(mapping).inject(MyClassWithDefaultArguments) as instance:
+        with Junkie(context).inject(MyClassWithDefaultArguments) as instance:
             self.assertEqual("value", instance.argument)
             self.assertEqual(10, instance.default_argument)
             self.assertEqual("set from context", instance.default_argument2)
@@ -128,9 +132,9 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, *my_tuple):
                 self.my_tuple = my_tuple
 
-        mapping = {"my_tuple": (1, 2, 3)}
+        context = {"my_tuple": (1, 2, 3)}
 
-        with Junkie(mapping).inject(MyClassWithKwargs) as instance:
+        with Junkie(context).inject(MyClassWithKwargs) as instance:
             self.assertEqual((1, 2, 3), instance.my_tuple)
 
     def test_args_usage_with_list_as_tuple_input(self):
@@ -138,9 +142,9 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, *my_tuple):
                 self.my_tuple = my_tuple
 
-        mapping = {"my_tuple": [1, 2, 3]}
+        context = {"my_tuple": [1, 2, 3]}
 
-        with Junkie(mapping).inject(MyClassWithKwargs) as instance:
+        with Junkie(context).inject(MyClassWithKwargs) as instance:
             self.assertEqual((1, 2, 3), instance.my_tuple)
 
     def test_args_usage_with_factory_function(self):
@@ -148,9 +152,9 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, *my_tuple):
                 self.my_tuple = my_tuple
 
-        mapping = {"my_tuple": lambda: (1, 2, 3)}
+        context = {"my_tuple": lambda: (1, 2, 3)}
 
-        with Junkie(mapping).inject(MyClassWithKwargs) as instance:
+        with Junkie(context).inject(MyClassWithKwargs) as instance:
             self.assertEqual((1, 2, 3), instance.my_tuple)
 
     def test_empty_kwargs_usage(self):
@@ -166,9 +170,9 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, **my_vars):
                 self.my_vars = my_vars
 
-        mapping = {"my_vars": {"a": "a"}}
+        context = {"my_vars": {"a": "a"}}
 
-        with Junkie(mapping).inject(MyClassWithKwargs) as instance:
+        with Junkie(context).inject(MyClassWithKwargs) as instance:
             self.assertEqual({"a": "a"}, instance.my_vars)
 
     def test_kwargs_usage_with_factory_function(self):
@@ -176,9 +180,9 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, **my_vars):
                 self.my_vars = my_vars
 
-        mapping = {"my_vars": lambda: {"a": "a"}}
+        context = {"my_vars": lambda: {"a": "a"}}
 
-        with Junkie(mapping).inject(MyClassWithKwargs) as instance:
+        with Junkie(context).inject(MyClassWithKwargs) as instance:
             self.assertEqual({"a": "a"}, instance.my_vars)
 
     def test_context_manager_enter_and_exit(self):
@@ -205,11 +209,13 @@ class JunkieTest(unittest.TestCase):
             logger.append("close")
 
         test_logger = []
-        mapping = {}
-        mapping.update({"logger": test_logger})
-        mapping.update({"message_service": MessageService, "database_context": create_database})
+        context = {
+            "logger": test_logger,
+            "message_service": MessageService,
+            "database_context": create_database,
+        }
 
-        with Junkie(mapping).inject(Class) as instance:
+        with Junkie(context).inject(Class) as instance:
             self.assertEqual(MessageService, type(instance.message_service))
             self.assertEqual("DB", instance.database_context)
 
@@ -229,16 +235,16 @@ class JunkieTest(unittest.TestCase):
                 pass
 
                 def __post_init__(self):
-                    self.text = self.prefix + self.suffix
+                    self.text = self.prefix + " " + self.suffix
 
             with Junkie({"prefix": "abc", "suffix": "def"}).inject(Class) as instance:
-                self.assertEqual("abcdef", instance.text)
+                self.assertEqual("abc def", instance.text)
         """))
 
     def test_unknown_type_exception(self):
         with self.assertRaises(RuntimeError) as error:
             # noinspection PyTypeChecker
-            with Junkie({}).inject(1):
+            with Junkie().inject(1):
                 pass
 
         self.assertEqual('Unknown type "1" (str, type or Callable expected)', str(error.exception))
@@ -260,17 +266,16 @@ class JunkieTest(unittest.TestCase):
         def create_message_service():
             yield "message-service"
 
-        mapping = {}
-        mapping.update({"text": "abc"})
-        mapping.update({
+        context = {
+            "text": "abc",
             "connection_string": lambda: "URL",
             "database_context": create_database,
             "message_service": create_message_service,
             "class": Class,
-        })
+        }
 
         with self.assertLogs(level="DEBUG") as logging_context:
-            with Junkie(mapping).inject("class"):
+            with Junkie(context).inject("class"):
                 logging.getLogger(__name__).info("execute context block")
 
         self.assertEqual([
@@ -298,7 +303,7 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, b: B):
                 self.b = b
 
-        with Junkie({}).inject(C) as c_instance:
+        with Junkie().inject(C) as c_instance:
             self.assertIsInstance(c_instance, C)
             self.assertIsInstance(c_instance.b, B)
             self.assertIsInstance(c_instance.b.a, A)
@@ -311,7 +316,7 @@ class JunkieTest(unittest.TestCase):
             def __init__(self, a: A = None):
                 self.a = a
 
-        with Junkie({}).inject(B) as b_instance:
+        with Junkie().inject(B) as b_instance:
             self.assertIsInstance(b_instance, B)
             self.assertIsNone(b_instance.a)
 
@@ -330,7 +335,7 @@ class JunkieTest(unittest.TestCase):
             self.assertEqual("from context", b.a)
 
     def test_no_create_for_builtins(self):
-        with self.assertRaises(JunkieError) as error:
+        with self.assertRaises(JunkieError):
             with Junkie().inject(dict):
                 pass
 
@@ -340,7 +345,7 @@ class JunkieTest(unittest.TestCase):
                 self.a = a
 
         with self.assertRaises(JunkieError) as error:
-            with Junkie({}).inject(B):
+            with Junkie().inject(B):
                 pass
 
         self.assertEqual('Mapping for "a" of builtin type "str" is missing', str(error.exception))
