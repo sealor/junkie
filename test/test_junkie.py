@@ -417,3 +417,9 @@ class JunkieTest(unittest.TestCase):
         with Junkie().inject(C, B) as (c, b):
             self.assertIs(b.a, c.a)
             self.assertIsInstance(b.a, A1)
+
+    def test_inject_junkie_reference(self):
+        my_junkie = Junkie()
+
+        with my_junkie.inject("_junkie") as injected_junkie:
+            self.assertIs(injected_junkie, my_junkie)

@@ -22,6 +22,8 @@ class Junkie:
         self._instances_by_name = None
         self._instances_by_name_stack = [{}]
 
+        self._mapping["_junkie"] = self
+
     @contextmanager
     def inject(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
         LOGGER.debug("inject(%s)", Junkie._LogParams(*names_and_factories))
