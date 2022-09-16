@@ -136,3 +136,16 @@ class Junkie:
             arg_params = list(map(str, self.args))
             kwarg_params = list(map(str, [f"{key}={repr(value)}" for key, value in self.kwargs.items()]))
             return ", ".join(arg_params + kwarg_params)
+
+
+def inject_list(*factories_or_names):
+    """Can be used within the context to let junkie create a list of instances from a list of factories or names"""
+    @contextmanager
+    def wrapper(_junkie: Junkie):
+        with _junkie.inject(*factories_or_names) as instances:
+            if isinstance(instances, tuple):
+                yield list(instances)
+            else:
+                yield [instances]
+
+    return wrapper
