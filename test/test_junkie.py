@@ -216,7 +216,7 @@ class JunkieTest(unittest.TestCase):
         }
 
         with Junkie(context).inject(Class) as instance:
-            self.assertEqual(MessageService, type(instance.message_service))
+            self.assertIsInstance(instance.message_service, MessageService)
             self.assertEqual("DB", instance.database_context)
 
             self.assertEqual(["connect", "open"], test_logger)
