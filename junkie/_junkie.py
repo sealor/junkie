@@ -22,6 +22,8 @@ class Junkie:
         self._instances_by_name = None
         self._instances_by_name_stack = [{}]
 
+        self._mapping["_junkie"] = self
+
     @contextmanager
     def inject(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
         LOGGER.debug("inject(%s)", Junkie._LogParams(*names_and_factories))
@@ -134,3 +136,16 @@ class Junkie:
             arg_params = list(map(str, self.args))
             kwarg_params = list(map(str, [f"{key}={repr(value)}" for key, value in self.kwargs.items()]))
             return ", ".join(arg_params + kwarg_params)
+
+
+def inject_list(*factories_or_names):
+    """Can be used within the context to let junkie create a list of instances from a list of factories or names"""
+    @contextmanager
+    def wrapper(_junkie: Junkie):
+        with _junkie.inject(*factories_or_names) as instances:
+            if isinstance(instances, tuple):
+                yield list(instances)
+            else:
+                yield [instances]
+
+    return wrapper

@@ -6,7 +6,7 @@ import unittest
 from contextlib import contextmanager
 from unittest import skipIf
 
-from junkie import Junkie, JunkieError
+from junkie import Junkie, JunkieError, inject_list
 
 
 class JunkieTest(unittest.TestCase):
@@ -417,3 +417,28 @@ class JunkieTest(unittest.TestCase):
         with Junkie().inject(C, B) as (c, b):
             self.assertIs(b.a, c.a)
             self.assertIsInstance(b.a, A1)
+
+    def test_inject_junkie_reference(self):
+        my_junkie = Junkie()
+
+        with my_junkie.inject("_junkie") as injected_junkie:
+            self.assertIs(injected_junkie, my_junkie)
+
+    def test_inject_list(self):
+        class A:
+            pass
+
+        class B:
+            def __init__(self, a: A, some_value: str):
+                self.a = a
+                self.some_value = some_value
+
+        context = {"some_value": "value", "my_list_1": inject_list(A, B), "my_list_2": inject_list(B)}
+
+        with Junkie(context).inject("my_list_1", "my_list_2") as (my_list_1, my_list_2):
+            self.assertIsInstance(my_list_1, list)
+            self.assertIsInstance(my_list_2, list)
+            self.assertIsInstance(my_list_1[0], A)
+            self.assertIsInstance(my_list_1[1].a, A)
+            self.assertEqual("value", my_list_1[1].some_value)
+            self.assertEqual("value", my_list_2[0].some_value)
