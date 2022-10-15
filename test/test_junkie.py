@@ -5,6 +5,7 @@ import textwrap
 import unittest
 from contextlib import contextmanager
 from unittest import skipIf
+from unittest.mock import Mock
 
 from junkie import Junkie, JunkieError, inject_list
 
@@ -442,3 +443,10 @@ class JunkieTest(unittest.TestCase):
             self.assertIsInstance(my_list_1[1].a, A)
             self.assertEqual("value", my_list_1[1].some_value)
             self.assertEqual("value", my_list_2[0].some_value)
+
+    def test_mock_in_context_should_not_raise(self):
+        with self.assertLogs(level=logging.DEBUG) as log:
+            with Junkie().inject(Mock()):
+                pass
+
+        self.assertIn("DEBUG:junkie:_ = Mock()", log.output)

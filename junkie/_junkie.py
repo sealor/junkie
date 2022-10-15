@@ -75,14 +75,15 @@ class Junkie:
         raise JunkieError('Unable to find "{}"'.format(instance_name))
 
     def _build_by_factory_function(self, factory_function: Callable, instance_name: Union[str, None]) -> Any:
+        factory_name = getattr(factory_function, "__name__", type(factory_function).__name__)
         if factory_function in BUILTINS:
             raise JunkieError(
-                'Mapping for "{}" of builtin type "{}" is missing'.format(instance_name, factory_function.__name__))
+                'Mapping for "{}" of builtin type "{}" is missing'.format(instance_name, factory_name))
 
         parameters, args, kwargs = self._build_parameters(factory_function)
 
         log_params = Junkie._LogParams(*parameters.keys(), *args, **kwargs)
-        LOGGER.debug("%s = %s(%s)", instance_name or "_", factory_function.__name__, log_params)
+        LOGGER.debug("%s = %s(%s)", instance_name or "_", factory_name, log_params)
         instance = factory_function(*parameters.values(), *args, **kwargs)
 
         if hasattr(instance, "__enter__"):
