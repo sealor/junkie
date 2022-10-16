@@ -117,7 +117,7 @@ class Junkie:
             elif annotation.default is not inspect.Parameter.empty:
                 parameters[instance_name] = annotation.default
 
-            elif isinstance(annotation.annotation, Callable):
+            elif isinstance(annotation.annotation, Callable) and annotation.annotation != inspect.Parameter.empty:
                 parameters[instance_name] = self._build_by_factory_function(annotation.annotation, instance_name)
 
             else:
@@ -140,6 +140,7 @@ class Junkie:
 
 def inject_list(*factories_or_names):
     """Can be used within the context to let junkie create a list of instances from a list of factories or names"""
+
     @contextmanager
     def wrapper(_junkie: Junkie):
         with _junkie.inject(*factories_or_names) as instances:
