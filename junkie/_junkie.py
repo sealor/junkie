@@ -25,6 +25,7 @@ class Junkie:
         self._instances_by_name_stack.push(self._instances_by_name)
 
         self._instantiation_stack: Junkie._InstantiationStack = Junkie._InstantiationStack()
+        self._cycle_detection_instance_set = set()
 
         self._mapping["_junkie"] = self
 
@@ -84,6 +85,10 @@ class Junkie:
             raise JunkieError(
                 'Mapping for "{}" of builtin type "{}" is missing'.format(instance_name, factory_function.__name__))
 
+        if factory_function in self._cycle_detection_instance_set:
+            raise JunkieError(f'Dependency cycle detected with "{factory_function.__name__}()"')
+
+        self._cycle_detection_instance_set.add(factory_function)
         self._instantiation_stack.push(factory_function)
 
         parameters, args, kwargs = self._build_parameters(factory_function)
@@ -106,6 +111,7 @@ class Junkie:
             self._instances_by_name[instance_name] = instance
 
         self._instantiation_stack.pop()
+        self._cycle_detection_instance_set.remove(factory_function)
 
         return instance
 

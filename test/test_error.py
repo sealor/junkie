@@ -83,3 +83,14 @@ class ErrorTest(unittest.TestCase):
         with self.assertRaisesRegex(JunkieError, message):
             with Junkie(context).inject(App):
                 pass
+
+    def test_detect_dependency_cycle(self):
+        class App:
+            def __init__(self, app):
+                app()
+
+        context = {"app": App}
+
+        with self.assertRaisesRegex(JunkieError, r'.*Dependency cycle detected with "App\(\)"'):
+            with Junkie(context).inject(App):
+                pass
