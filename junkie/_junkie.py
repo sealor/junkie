@@ -3,7 +3,7 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Tuple, Mapping, Any, Callable
+from typing import Union, Tuple, Mapping, Any, Callable, Optional
 
 import junkie
 
@@ -18,9 +18,11 @@ class JunkieError(RuntimeError):
 class Junkie:
     def __init__(self, instances_and_factories: Mapping[str, Any] = None):
         self._mapping = instances_and_factories or {}
-        self._exit_stack = None
-        self._instances_by_name = None
-        self._instances_by_name_stack = [{}]
+        self._exit_stack: Optional[ExitStack] = None
+
+        self._instances_by_name: dict = {}
+        self._instances_by_name_stack: Junkie._Stack = Junkie._Stack()
+        self._instances_by_name_stack.push(self._instances_by_name)
 
         self._mapping["_junkie"] = self
 
@@ -29,8 +31,8 @@ class Junkie:
         LOGGER.debug("inject(%s)", Junkie._LogParams(*names_and_factories))
 
         with ExitStack() as self._exit_stack:
-            self._instances_by_name = self._instances_by_name_stack[-1].copy()
-            self._instances_by_name_stack.append(self._instances_by_name)
+            self._instances_by_name = self._instances_by_name_stack.peek().copy()
+            self._instances_by_name_stack.push(self._instances_by_name)
 
             if len(names_and_factories) == 1:
                 yield self._build_instance(names_and_factories[0])
@@ -140,6 +142,19 @@ class Junkie:
             arg_params = list(map(str, self.args))
             kwarg_params = list(map(str, [f"{key}={repr(value)}" for key, value in self.kwargs.items()]))
             return ", ".join(arg_params + kwarg_params)
+
+    class _Stack:
+        def __init__(self):
+            self._stack = []
+
+        def push(self, item):
+            self._stack.append(item)
+
+        def pop(self):
+            return self._stack.pop()
+
+        def peek(self):
+            return self._stack[-1]
 
 
 def inject_list(*factories_or_names):
