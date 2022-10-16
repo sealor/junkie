@@ -349,7 +349,7 @@ class JunkieTest(unittest.TestCase):
             with Junkie().inject(B):
                 pass
 
-        self.assertEqual('Mapping for "a" of builtin type "str" is missing', str(error.exception))
+        self.assertRegex(str(error.exception), 'Mapping for "a" of builtin type "str" is missing')
 
     def test_object_is_persisted(self):
         class A:
