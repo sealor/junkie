@@ -81,13 +81,17 @@ class Junkie:
 
         parameters, args, kwargs = self._build_parameters(factory_function)
 
-        log_params = Junkie._LogParams(*parameters.keys(), *args, **kwargs)
-        LOGGER.debug("%s = %s(%s)", instance_name or "_", factory_function.__name__, log_params)
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            log_params = Junkie._LogParams(*parameters.keys(), *args, **kwargs)
+            function_name = getattr(factory_function, "__name__", str(factory_function))
+            LOGGER.debug("%s = %s(%s)", instance_name or "_", function_name, log_params)
+
         instance = factory_function(*parameters.values(), *args, **kwargs)
 
         if hasattr(instance, "__enter__"):
-            LOGGER.debug("%s.__enter__()", instance_name or "_")
-            self._exit_stack.push(lambda *exception_details: LOGGER.debug("%s.__exit__()", instance_name or "_"))
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                LOGGER.debug("%s.__enter__()", instance_name or "_")
+                self._exit_stack.push(lambda *exception_details: LOGGER.debug("%s.__exit__()", instance_name or "_"))
 
             instance = self._exit_stack.enter_context(instance)
 
