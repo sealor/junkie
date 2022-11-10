@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='junkie',
-    version='3.0.0.dev2',
+    version='3.0.0.dev3',
     packages=setuptools.find_packages(exclude="test"),
     author='Stefan Richter',
     description='A dependency injection library for beginners',
