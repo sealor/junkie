@@ -77,7 +77,7 @@ class ErrorTest(unittest.TestCase):
             "\n"
             r'-> App\(\) at ".*/test/test_error.py:\d+"' '\n'
             r' -> connect\(\) at unknown source' '\n'
-            r'ValueError: no signature found for builtin <built-in function connect>'
+            r'(ValueError|RuntimeError): (no signature found for builtin <built-in function connect>)?'
         )
 
         with self.assertRaisesRegex(JunkieError, message):
