@@ -185,6 +185,8 @@ class Junkie:
 
         @staticmethod
         def _get_source_info(factory: Callable) -> str:
+            while hasattr(factory, "__wrapped__"):
+                factory = factory.__wrapped__
             try:
                 return f'"{inspect.getsourcefile(factory)}:{inspect.getsourcelines(factory)[1]}"'
             except:

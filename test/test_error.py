@@ -1,5 +1,7 @@
 import sqlite3
 import unittest
+from contextlib import contextmanager
+from functools import lru_cache
 
 from junkie import Junkie, JunkieError
 
@@ -42,6 +44,31 @@ class ErrorTest(unittest.TestCase):
 
         with self.assertRaisesRegex(JunkieError, message):
             with Junkie().inject(App):
+                pass
+
+    def test_list_wrapped_function_in_error_message(self):
+        @lru_cache(3)
+        @contextmanager
+        def connect_database(_):
+            yield
+
+        class App:
+            def __init__(self, database):
+                self.database = database
+
+        context = {
+            "database": connect_database
+        }
+
+        message = (
+            "\n"
+            r'-> App\(\) at ".*/test/test_error.py:\d+"' '\n'
+            r' -> connect_database\(\) at ".*/test/test_error.py:\d+"' '\n'
+            r'JunkieError: Unable to find "_" for "connect_database\(\)"'
+        )
+
+        with self.assertRaisesRegex(JunkieError, message):
+            with Junkie(context).inject(App):
                 pass
 
     def test_list_lambda_in_error_message(self):
