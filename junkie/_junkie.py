@@ -41,11 +41,10 @@ class Junkie:
             self._instances_by_name = self._instances_by_name_stack.peek().copy()
             self._instances_by_name_stack.push(self._instances_by_name)
 
-            with self._prepend_instantiation_stack_on_error():
-                if len(names_and_factories) == 1:
-                    yield self._build_instance(names_and_factories[0])
-                else:
-                    yield self._build_tuple(*names_and_factories)
+            if len(names_and_factories) == 1:
+                yield self._build_instance(names_and_factories[0])
+            else:
+                yield self._build_tuple(*names_and_factories)
 
             self._instances_by_name_stack.pop()
 
@@ -65,7 +64,10 @@ class Junkie:
         elif callable(name_or_factory):
             return self._build_by_factory_function(name_or_factory, None)
 
-        raise JunkieError('Unknown type "{}" (str, type or Callable expected)'.format(name_or_factory))
+        raise JunkieError(
+            f"{self._instantiation_stack}" +
+            f'Unknown type "{name_or_factory}" (str, type or Callable expected)'
+        )
 
     def _build_by_instance_name(self, instance_name: str, default=None) -> Any:
         if instance_name in self._instances_by_name:
@@ -82,16 +84,23 @@ class Junkie:
         if default is not None:
             return default
 
-        raise JunkieError('Unable to find "{}"'.format(instance_name))
+        raise JunkieError(
+            f"{self._instantiation_stack}" +
+            f'Unable to find "{instance_name}"'
+        )
 
     def _build_by_factory_function(self, factory_function: Callable, instance_name: Union[str, None]) -> Any:
         if factory_function in BUILTINS:
             raise JunkieError(
-                'Mapping for "{}" of builtin type "{}" is missing'.format(
-                    instance_name, get_factory_name(factory_function)))
+                f"{self._instantiation_stack}" +
+                f'Mapping for "{instance_name}" of builtin type "{get_factory_name(factory_function)}" is missing'
+            )
 
         if factory_function in self._cycle_detection_instance_set:
-            raise JunkieError(f'Dependency cycle detected with "{get_factory_name(factory_function)}()"')
+            raise JunkieError(
+                f"{self._instantiation_stack}" +
+                f'Dependency cycle detected with "{get_factory_name(factory_function)}()"'
+            )
 
         self._cycle_detection_instance_set.add(factory_function)
         self._instantiation_stack.push(factory_function)
@@ -124,7 +133,15 @@ class Junkie:
         args = ()
         kwargs = {}
 
-        for instance_name, annotation in inspect.signature(factory_function).parameters.items():
+        try:
+            signature = inspect.signature(factory_function)
+        except Exception as e:
+            raise JunkieError(
+                f"{self._instantiation_stack}" +
+                f'Unable to inspect signature for "{get_factory_name(factory_function)}()"'
+            ) from e
+
+        for instance_name, annotation in signature.parameters.items():
             if annotation.kind is inspect.Parameter.VAR_POSITIONAL:
                 args = self._build_by_instance_name(instance_name, args)
 
@@ -145,7 +162,8 @@ class Junkie:
 
             else:
                 raise JunkieError(
-                    'Unable to find "{}" for "{}()"'.format(instance_name, get_factory_name(factory_function))
+                    f"{self._instantiation_stack}" +
+                    f'Unable to find "{instance_name}" for "{get_factory_name(factory_function)}()"'
                 )
 
         return parameters, args, kwargs
@@ -178,10 +196,13 @@ class Junkie:
 
     class _InstantiationStack(_Stack):
         def __str__(self):
+            if len(self._stack) == 0:
+                return ""
+
             return "".join([
                 f'\n{idx * " "}-> {get_factory_name(factory)}() at {self._get_source_info(factory)}'
                 for idx, factory in enumerate(self._stack)
-            ])
+            ]) + "\n"
 
         @staticmethod
         def _get_source_info(factory: Callable) -> str:
@@ -191,16 +212,6 @@ class Junkie:
                 return f'"{inspect.getsourcefile(factory)}:{inspect.getsourcelines(factory)[1]}"'
             except:
                 return "unknown source"
-
-    @contextmanager
-    def _prepend_instantiation_stack_on_error(self):
-        try:
-            yield
-        except Exception as e:
-            if len(self._instantiation_stack) == 0:
-                raise e
-
-            raise JunkieError(f"{self._instantiation_stack}\n{type(e).__name__}: {str(e)}")
 
 
 def inject_list(*factories_or_names):

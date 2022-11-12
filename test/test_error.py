@@ -3,7 +3,7 @@ import unittest
 from contextlib import contextmanager
 from functools import lru_cache
 
-from junkie import Junkie, JunkieError
+from junkie import Junkie, JunkieError, inject_list
 
 
 class ErrorTest(unittest.TestCase):
@@ -20,7 +20,7 @@ class ErrorTest(unittest.TestCase):
             "\n"
             r'-> App\(\) at ".*/test/test_error.py:\d+"' '\n'
             r' -> Database\(\) at ".*/test/test_error.py:\d+"' '\n'
-            r'JunkieError: Unable to find "_" for "Database\(\)"'
+            r'Unable to find "_" for "Database\(\)"'
         )
 
         with self.assertRaisesRegex(JunkieError, message):
@@ -39,7 +39,7 @@ class ErrorTest(unittest.TestCase):
             "\n"
             r'-> App\(\) at ".*/test/test_error.py:\d+"' '\n'
             r' -> connect_database\(\) at ".*/test/test_error.py:\d+"' '\n'
-            r'JunkieError: Unable to find "_" for "connect_database\(\)"'
+            r'Unable to find "_" for "connect_database\(\)"'
         )
 
         with self.assertRaisesRegex(JunkieError, message):
@@ -64,7 +64,7 @@ class ErrorTest(unittest.TestCase):
             "\n"
             r'-> App\(\) at ".*/test/test_error.py:\d+"' '\n'
             r' -> connect_database\(\) at ".*/test/test_error.py:\d+"' '\n'
-            r'JunkieError: Unable to find "_" for "connect_database\(\)"'
+            r'Unable to find "_" for "connect_database\(\)"'
         )
 
         with self.assertRaisesRegex(JunkieError, message):
@@ -84,7 +84,7 @@ class ErrorTest(unittest.TestCase):
             "\n"
             r'-> App\(\) at ".*/test/test_error.py:\d+"' '\n'
             r' -> <lambda>\(\) at ".*/test/test_error.py:\d+"' '\n'
-            r'JunkieError: Unable to find "unknown" for "<lambda>\(\)"'
+            r'Unable to find "unknown" for "<lambda>\(\)"'
         )
 
         with self.assertRaisesRegex(JunkieError, message):
@@ -104,7 +104,29 @@ class ErrorTest(unittest.TestCase):
             "\n"
             r'-> App\(\) at ".*/test/test_error.py:\d+"' '\n'
             r' -> connect\(\) at unknown source' '\n'
-            r'(ValueError|RuntimeError): (no signature found for builtin <built-in function connect>)?'
+            r'Unable to inspect signature for "connect\(\)"'
+        )
+
+        with self.assertRaisesRegex(JunkieError, message):
+            with Junkie(context).inject(App):
+                pass
+
+    def test_one_stack_trace_in_error_message(self):
+        class App:
+            def __init__(self, database):
+                self.database = database
+
+        context = {
+            "database": inject_list("file"),
+            "file": lambda fs: fs.file,
+        }
+
+        message = (
+            "\n"
+            r'-> App\(\) at ".*/test/test_error.py:\d+"' '\n'
+            r' -> wrapper\(\) at ".*/junkie/_junkie.py:\d+"' '\n'
+            r'  -> <lambda>\(\) at ".*/test/test_error.py:\d+"' '\n'
+            r'Unable to find "fs" for "<lambda>\(\)"'
         )
 
         with self.assertRaisesRegex(JunkieError, message):
