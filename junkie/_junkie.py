@@ -11,6 +11,10 @@ LOGGER = logging.getLogger(junkie.__name__)
 BUILTINS = {item for item in vars(builtins).values() if isinstance(item, type)}
 
 
+def get_factory_name(factory: Callable) -> str:
+    return getattr(factory, "__name__", str(factory))
+
+
 class JunkieError(RuntimeError):
     pass
 
@@ -83,10 +87,11 @@ class Junkie:
     def _build_by_factory_function(self, factory_function: Callable, instance_name: Union[str, None]) -> Any:
         if factory_function in BUILTINS:
             raise JunkieError(
-                'Mapping for "{}" of builtin type "{}" is missing'.format(instance_name, factory_function.__name__))
+                'Mapping for "{}" of builtin type "{}" is missing'.format(
+                    instance_name, get_factory_name(factory_function)))
 
         if factory_function in self._cycle_detection_instance_set:
-            raise JunkieError(f'Dependency cycle detected with "{factory_function.__name__}()"')
+            raise JunkieError(f'Dependency cycle detected with "{get_factory_name(factory_function)}()"')
 
         self._cycle_detection_instance_set.add(factory_function)
         self._instantiation_stack.push(factory_function)
@@ -95,8 +100,7 @@ class Junkie:
 
         if LOGGER.isEnabledFor(logging.DEBUG):
             log_params = Junkie._LogParams(*parameters.keys(), *args, **kwargs)
-            function_name = getattr(factory_function, "__name__", str(factory_function))
-            LOGGER.debug("%s = %s(%s)", instance_name or "_", function_name, log_params)
+            LOGGER.debug("%s = %s(%s)", instance_name or "_", get_factory_name(factory_function), log_params)
 
         instance = factory_function(*parameters.values(), *args, **kwargs)
 
@@ -141,7 +145,7 @@ class Junkie:
 
             else:
                 raise JunkieError(
-                    'Unable to find "{}" for "{}()"'.format(instance_name, factory_function.__name__)
+                    'Unable to find "{}" for "{}()"'.format(instance_name, get_factory_name(factory_function))
                 )
 
         return parameters, args, kwargs
@@ -175,7 +179,7 @@ class Junkie:
     class _InstantiationStack(_Stack):
         def __str__(self):
             return "".join([
-                f'\n{idx * " "}-> {factory.__name__}() at {self._get_source_info(factory)}'
+                f'\n{idx * " "}-> {get_factory_name(factory)}() at {self._get_source_info(factory)}'
                 for idx, factory in enumerate(self._stack)
             ])
 
