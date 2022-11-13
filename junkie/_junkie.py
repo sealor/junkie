@@ -3,7 +3,7 @@ import inspect
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager, ExitStack
-from typing import Union, Tuple, Mapping, Any, Callable, Optional
+from typing import Union, Tuple, Mapping, Any, Callable, Optional, Iterator
 
 import junkie
 
@@ -19,7 +19,7 @@ class JunkieError(RuntimeError):
     pass
 
 
-class Junkie:
+class Junkie(Mapping[str, Any]):
     def __init__(self, instances_and_factories: Mapping[str, Any] = None):
         self._mapping = instances_and_factories or {}
         self._exit_stack: Optional[ExitStack] = None
@@ -32,6 +32,26 @@ class Junkie:
         self._cycle_detection_instance_set = set()
 
         self._mapping["_junkie"] = self
+
+    def __getitem__(self, item):
+        return self._instances_by_name[item]
+
+    def __setitem__(self, key, value):
+        if key in self._instances_by_name:
+            raise JunkieError(f'Instance for "{key}" already exists')
+        if key in self._mapping:
+            raise JunkieError(f'Instance for "{key}" already exists in context')
+
+        self._instances_by_name[key] = value
+
+    def __len__(self) -> int:
+        return self._instances_by_name.__len__()
+
+    def __iter__(self) -> Iterator:
+        return self._instances_by_name.__iter__()
+
+    def __contains__(self, item) -> bool:
+        return self._instances_by_name.__contains__(item)
 
     @contextmanager
     def inject(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
@@ -47,6 +67,7 @@ class Junkie:
                 yield self._build_tuple(*names_and_factories)
 
             self._instances_by_name_stack.pop()
+            self._instances_by_name = self._instances_by_name_stack.peek()
 
     def _build_tuple(self, *names_and_factories: Union[str, Callable]) -> Tuple[Any]:
         instances = []
