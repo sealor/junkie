@@ -86,11 +86,10 @@ class Junkie(Mapping[str, Any]):
             return self._build_by_factory_function(name_or_factory, None)
 
         raise JunkieError(
-            f"{self._instantiation_stack}" +
-            f'Unknown type "{name_or_factory}" (str, type or Callable expected)'
+            f"{self._instantiation_stack}" + f'Unknown type "{name_or_factory}" (str, type or Callable expected)'
         )
 
-    def _build_by_instance_name(self, instance_name: str, default=None) -> Any:
+    def _build_by_instance_name(self, instance_name: str) -> Any:
         if instance_name in self._instances_by_name:
             return self._instances_by_name[instance_name]
 
@@ -102,37 +101,31 @@ class Junkie(Mapping[str, Any]):
             else:
                 return value
 
-        if default is not None:
-            return default
-
-        raise JunkieError(
-            f"{self._instantiation_stack}" +
-            f'Unable to find "{instance_name}"'
-        )
+        raise JunkieError(f"{self._instantiation_stack}" + f'Unable to find "{instance_name}"')
 
     def _build_by_factory_function(self, factory_function: Callable, instance_name: Union[str, None]) -> Any:
         if factory_function in BUILTINS:
             raise JunkieError(
-                f"{self._instantiation_stack}" +
-                f'Mapping for "{instance_name}" of builtin type "{get_factory_name(factory_function)}" is missing'
+                f"{self._instantiation_stack}"
+                + f'Mapping for "{instance_name}" of builtin type "{get_factory_name(factory_function)}" is missing'
             )
 
         if factory_function in self._cycle_detection_instance_set:
             raise JunkieError(
-                f"{self._instantiation_stack}" +
-                f'Dependency cycle detected with "{get_factory_name(factory_function)}()"'
+                f"{self._instantiation_stack}"
+                + f'Dependency cycle detected with "{get_factory_name(factory_function)}()"'
             )
 
         self._cycle_detection_instance_set.add(factory_function)
         self._instantiation_stack.push(factory_function)
 
-        parameters, args, kwargs = self._build_parameters(factory_function)
+        positional_params, args, keyword_params, kwargs = self._build_parameters(factory_function)
 
         if LOGGER.isEnabledFor(logging.DEBUG):
-            log_params = Junkie._LogParams(*parameters.keys(), *args, **kwargs)
+            log_params = Junkie._LogParams(*positional_params.keys(), *args, **keyword_params, **kwargs)
             LOGGER.debug("%s = %s(%s)", instance_name or "_", get_factory_name(factory_function), log_params)
 
-        instance = factory_function(*parameters.values(), *args, **kwargs)
+        instance = factory_function(*positional_params.values(), *args, **keyword_params, **kwargs)
 
         if hasattr(instance, "__enter__"):
             if LOGGER.isEnabledFor(logging.DEBUG):
@@ -150,44 +143,68 @@ class Junkie(Mapping[str, Any]):
         return instance
 
     def _build_parameters(self, factory_function: Callable) -> (OrderedDict, tuple, dict):
-        parameters = OrderedDict()
+        positional_params = OrderedDict()
         args = ()
+        keyword_params = OrderedDict()
         kwargs = {}
+        positional_params_finished = False
 
         try:
             signature = inspect.signature(factory_function)
         except Exception as e:
             raise JunkieError(
-                f"{self._instantiation_stack}" +
-                f'Unable to inspect signature for "{get_factory_name(factory_function)}()"'
+                f"{self._instantiation_stack}"
+                + f'Unable to inspect signature for "{get_factory_name(factory_function)}()"'
             ) from e
 
         for instance_name, annotation in signature.parameters.items():
-            if annotation.kind is inspect.Parameter.VAR_POSITIONAL:
-                args = self._build_by_instance_name(instance_name, args)
+            if instance_name in self._instances_by_name or instance_name in self._mapping:
+                value = self._build_by_instance_name(instance_name)
 
+            # *args
+            elif annotation.kind is inspect.Parameter.VAR_POSITIONAL:
+                continue
+
+            # **kwargs
             elif annotation.kind is inspect.Parameter.VAR_KEYWORD:
-                kwargs = self._build_by_instance_name(instance_name, kwargs)
+                continue
 
-            elif instance_name in self._instances_by_name:
-                parameters[instance_name] = self._instances_by_name[instance_name]
-
-            elif instance_name in self._mapping:
-                parameters[instance_name] = self._build_by_instance_name(instance_name)
-
+            # arg="value"
             elif annotation.default is not inspect.Parameter.empty:
-                parameters[instance_name] = annotation.default
+                positional_params_finished = True
+                continue
 
             elif isinstance(annotation.annotation, Callable) and annotation.annotation != inspect.Parameter.empty:
-                parameters[instance_name] = self._build_by_factory_function(annotation.annotation, instance_name)
+                value = self._build_by_factory_function(annotation.annotation, instance_name)
 
             else:
                 raise JunkieError(
-                    f"{self._instantiation_stack}" +
-                    f'Unable to find "{instance_name}" for "{get_factory_name(factory_function)}()"'
+                    f"{self._instantiation_stack}"
+                    + f'Unable to find "{instance_name}" for "{get_factory_name(factory_function)}()"'
                 )
 
-        return parameters, args, kwargs
+            if annotation.kind is inspect.Parameter.POSITIONAL_ONLY:
+                positional_params[instance_name] = value
+
+            elif annotation.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD:
+                if positional_params_finished:
+                    keyword_params[instance_name] = value
+                else:
+                    positional_params[instance_name] = value
+
+            elif annotation.kind is inspect.Parameter.VAR_POSITIONAL:
+                args = value
+
+            elif annotation.kind is inspect.Parameter.KEYWORD_ONLY:
+                keyword_params[instance_name] = value
+
+            elif annotation.kind is inspect.Parameter.VAR_KEYWORD:
+                kwargs = value
+
+            else:
+                raise NotImplementedError(f'Unknown parameter type "{annotation.kind}"')
+
+        return positional_params, args, keyword_params, kwargs
 
     class _LogParams:
         def __init__(self, *args, **kwargs):
@@ -220,10 +237,15 @@ class Junkie(Mapping[str, Any]):
             if len(self._stack) == 0:
                 return ""
 
-            return "".join([
-                f'\n{idx * " "}-> {get_factory_name(factory)}() at {self._get_source_info(factory)}'
-                for idx, factory in enumerate(self._stack)
-            ]) + "\n"
+            return (
+                "".join(
+                    [
+                        f'\n{idx * " "}-> {get_factory_name(factory)}() at {self._get_source_info(factory)}'
+                        for idx, factory in enumerate(self._stack)
+                    ]
+                )
+                + "\n"
+            )
 
         @staticmethod
         def _get_source_info(factory: Callable) -> str:
