@@ -21,7 +21,7 @@ class JunkieError(RuntimeError):
 
 class Junkie(Mapping[str, Any]):
     def __init__(self, instances_and_factories: Mapping[str, Any] = None):
-        self._mapping = instances_and_factories or {}
+        self._context = instances_and_factories or {}
         self._exit_stack: Optional[ExitStack] = None
 
         self._instances_by_name: dict = {}
@@ -31,7 +31,7 @@ class Junkie(Mapping[str, Any]):
         self._instantiation_stack: Junkie._InstantiationStack = Junkie._InstantiationStack()
         self._cycle_detection_instance_set = set()
 
-        self._mapping["_junkie"] = self
+        self._context["_junkie"] = self
 
     def __getitem__(self, item):
         return self._instances_by_name[item]
@@ -39,7 +39,7 @@ class Junkie(Mapping[str, Any]):
     def __setitem__(self, key, value):
         if key in self._instances_by_name:
             raise JunkieError(f'Instance for "{key}" already exists')
-        if key in self._mapping:
+        if key in self._context:
             raise JunkieError(f'Instance for "{key}" already exists in context')
 
         self._instances_by_name[key] = value
@@ -93,8 +93,8 @@ class Junkie(Mapping[str, Any]):
         if instance_name in self._instances_by_name:
             return self._instances_by_name[instance_name]
 
-        if instance_name in self._mapping:
-            value = self._mapping[instance_name]
+        if instance_name in self._context:
+            value = self._context[instance_name]
 
             if callable(value):
                 return self._build_by_factory_function(value, instance_name)
@@ -158,7 +158,7 @@ class Junkie(Mapping[str, Any]):
             ) from e
 
         for instance_name, annotation in signature.parameters.items():
-            if instance_name in self._instances_by_name or instance_name in self._mapping:
+            if instance_name in self._instances_by_name or instance_name in self._context:
                 value = self._build_by_instance_name(instance_name)
 
             # *args
@@ -237,15 +237,10 @@ class Junkie(Mapping[str, Any]):
             if len(self._stack) == 0:
                 return ""
 
-            return (
-                "".join(
-                    [
-                        f'\n{idx * " "}-> {get_factory_name(factory)}() at {self._get_source_info(factory)}'
-                        for idx, factory in enumerate(self._stack)
-                    ]
-                )
-                + "\n"
-            )
+            return "".join([
+                f'\n{idx * " "}-> {get_factory_name(factory)}() at {self._get_source_info(factory)}'
+                for idx, factory in enumerate(self._stack)
+            ]) + "\n"
 
         @staticmethod
         def _get_source_info(factory: Callable) -> str:
