@@ -36,14 +36,6 @@ class Junkie(Mapping[str, Any]):
     def __getitem__(self, item):
         return self._instances_by_name[item]
 
-    def __setitem__(self, key, value):
-        if key in self._instances_by_name:
-            raise JunkieError(f'Instance for "{key}" already exists')
-        if key in self._context:
-            raise JunkieError(f'Instance for "{key}" already exists in context')
-
-        self._instances_by_name[key] = value
-
     def __len__(self) -> int:
         return self._instances_by_name.__len__()
 
