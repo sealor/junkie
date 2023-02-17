@@ -45,6 +45,14 @@ class Junkie(Mapping[str, Any]):
     def __contains__(self, item) -> bool:
         return self._instances_by_name.__contains__(item)
 
+    def extend(self, instances: Mapping[str, Any]) -> "Junkie":
+        if not instances.keys().isdisjoint(self._instances_by_name.keys() | self._context.keys()):
+            duplicated_names = set(instances.keys()).intersection(self._instances_by_name.keys() | self._context.keys())
+            raise JunkieError(f"Instances for names {duplicated_names} already exists")
+
+        self._instances_by_name.update(instances)
+        return self
+
     @contextmanager
     def inject(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:
         LOGGER.debug("inject(%s)", Junkie._LogParams(*names_and_factories))

@@ -184,6 +184,46 @@ class JunkieTest(unittest.TestCase):
         with Junkie(context).inject(MyClassWithKwargs) as instance:
             self.assertEqual({"a": "a"}, instance.my_vars)
 
+    def test_extend(self):
+        class MyClass:
+            def __init__(self, var):
+                self.var = var
+
+        with Junkie().extend({"var": 7}).inject(MyClass) as my_class:
+            self.assertEqual(7, my_class.var)
+
+    def test_extended_objects_disappear_in_upper_scopes(self):
+        class MyClass1:
+            pass
+
+        _junkie = Junkie()
+        with _junkie.inject(MyClass1):
+            _junkie.extend({"var": 7})
+            self.assertIn("var", _junkie)
+            self.assertEqual(7, _junkie["var"])
+
+        self.assertNotIn("var", _junkie)
+
+    def test_error_on_extend_when_overriding_the_context(self):
+        context = {
+            "var": 11,
+        }
+
+        with self.assertRaisesRegex(JunkieError, "^Instances for names {'var'} already exists$"):
+            Junkie(context).extend({"var": 5})
+
+    def test_error_on_extend_when_overriding_instances(self):
+        class MyClass1:
+            pass
+
+        class MyClass2:
+            def __init__(self, my_class1: MyClass1):
+                assert my_class1 is not None
+
+        with self.assertRaisesRegex(JunkieError, "^Instances for names {'my_class1'} already exists$"):
+            with Junkie().inject(MyClass2, "_junkie") as (_, _junkie):
+                _junkie.extend({"my_class1": MyClass1()})
+
     def test_context_manager_enter_and_exit(self):
         class Class:
             def __init__(self, message_service, database_context):
