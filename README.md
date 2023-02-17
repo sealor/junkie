@@ -137,6 +137,27 @@ class AppTest(unittest.TestCase):
 
 ## Advanced usage
 
+### New object versus reuse an object
+
+In general, all objects will be reused by their name. But, if we do not provide a name the object will not be reused.
+
+```python
+from junkie import Junkie
+
+
+class App:
+    pass
+
+
+context = {
+    "app": App,
+}
+
+with Junkie(context).inject("app", App, "app") as (app1, app2, app3):
+    assert app1 == app3
+    assert app1 != app2 != app3
+```
+
 ### Adjust object construction via lambdas
 
 The following example code shows various ways to adjust object construction via Python lambdas.

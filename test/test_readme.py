@@ -46,6 +46,20 @@ class ReadmeTest(unittest.TestCase):
         with Junkie(test_context).inject(App) as app:
             self.assertEqual(app.database_url, "sqlite://")
 
+    def test_reuse(self):
+        from junkie import Junkie
+
+        class App:
+            pass
+
+        context = {
+            "app": App,
+        }
+
+        with Junkie(context).inject("app", App, "app") as (app1, app2, app3):
+            assert app1 == app3
+            assert app1 != app2 != app3
+
     def test_lambdas(self):
         from junkie import Junkie
 
