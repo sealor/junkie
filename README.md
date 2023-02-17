@@ -216,7 +216,7 @@ Sometimes you need a list of objects. This list can be instantiated with the `in
 similar to the `Junkie.inject()` method.
 
 ```python
-from junkie import Junkie
+from junkie import Junkie, inject_list
 
 
 class CustomerDataSource:
@@ -239,10 +239,10 @@ class App:
 
 context = {
     "customer_ds": lambda: CustomerDataSource("sqlite://"),
-    "data_sources": ["customer_ds", ProductDataSource, SupplierDataSource],
+    "data_sources": inject_list("customer_ds", ProductDataSource, SupplierDataSource),
 }
 
-with Junkie().inject(App) as app:
+with Junkie(context).inject(App) as app:
     assert isinstance(app.data_sources[0], CustomerDataSource)
     assert isinstance(app.data_sources[1], ProductDataSource)
     assert isinstance(app.data_sources[2], SupplierDataSource)
@@ -272,7 +272,7 @@ context = {
 }
 
 with Junkie(context).inject(App) as app:
-    assert app.database == "called"
+    assert app.database() == "called"
 ```
 
 ### Built-in functions as context values are not supported
