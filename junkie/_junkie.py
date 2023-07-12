@@ -50,8 +50,7 @@ class Junkie(Mapping[str, Any]):
             duplicated_names = set(instances.keys()).intersection(self._instances_by_name.keys() | self._context.keys())
             raise JunkieError(f"Instances for names {duplicated_names} already exists")
 
-        self._instances_by_name.update(instances)
-        return self
+        return Junkie({**self, **instances})
 
     @contextmanager
     def inject(self, *names_and_factories: Union[str, Callable]) -> Union[Any, Tuple[Any]]:

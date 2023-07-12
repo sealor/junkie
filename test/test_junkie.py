@@ -192,13 +192,17 @@ class JunkieTest(unittest.TestCase):
         with Junkie().extend({"var": 7}).inject(MyClass) as my_class:
             self.assertEqual(7, my_class.var)
 
+    def test_extend_does_not_change_junkies_state(self):
+        _junkie = Junkie()
+        _junkie.extend({"var": 7})
+        self.assertNotIn("var", _junkie)
+
     def test_extended_objects_disappear_in_upper_scopes(self):
         class MyClass1:
             pass
 
         _junkie = Junkie()
-        with _junkie.inject(MyClass1):
-            _junkie.extend({"var": 7})
+        with _junkie.extend({"var": 7}).inject("_junkie") as _junkie:
             self.assertIn("var", _junkie)
             self.assertEqual(7, _junkie["var"])
 
