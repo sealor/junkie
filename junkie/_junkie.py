@@ -69,7 +69,7 @@ class Junkie(Mapping[str, Any]):
             self._instances_by_name_stack.pop()
             self._instances_by_name = self._instances_by_name_stack.peek()
 
-    def _build_tuple(self, *names_and_factories: Union[str, Callable]) -> Tuple[Any]:
+    def _build_tuple(self, *names_and_factories: Union[str, Callable]) -> Tuple[Any, ...]:
         instances = []
 
         for name_or_factory in names_and_factories:
