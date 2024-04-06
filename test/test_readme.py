@@ -23,12 +23,18 @@ class ReadmeTest(unittest.TestCase):
         class Database:
             pass
 
-        class App:
+        class QueryHelper:
             def __init__(self, database: Database):
                 self.database = database
 
-        with Junkie().inject(App) as app:
+        class App:
+            def __init__(self, database: Database, query_helper: QueryHelper):
+                self.database = database
+                self.query_helper = query_helper
+
+        with Junkie().inject(App) as app:  # type: App
             assert isinstance(app.database, Database)
+            assert app.query_helper.database == app.database
 
     def test_integration_test(self):
         from junkie import Junkie

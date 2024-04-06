@@ -83,7 +83,8 @@ Junkie uses constructor-based dependency injection. The constructor gets all ref
 them for later usage. The constructor should not do any work.
 
 The argument names and their type hints are the easiest and recommended way to define object construction of
-dependencies. The context dictionary should be used to handle more complicated situations.
+dependencies. Junkie stores and reuses all objects by their argument name until the object is not required anymore.
+The context dictionary should be used to handle more complicated situations.
 
 ```python
 from junkie import Junkie
@@ -93,13 +94,20 @@ class Database:
     pass
 
 
-class App:
+class QueryHelper:
     def __init__(self, database: Database):
         self.database = database
 
 
-with Junkie().inject(App) as app:
+class App:
+    def __init__(self, database: Database, query_helper: QueryHelper):
+        self.database = database
+        self.query_helper = query_helper
+
+
+with Junkie().inject(App) as app:  # type: App
     assert isinstance(app.database, Database)
+    assert app.query_helper.database == app.database
 ```
 
 ### Write integration tests with modified application context
