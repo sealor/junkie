@@ -1,4 +1,5 @@
-.idea/
+/.idea/
+/*.egg-info/
 venv/
 __pycache__
 *.pyc
