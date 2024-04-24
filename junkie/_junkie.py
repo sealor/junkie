@@ -36,6 +36,8 @@ class Junkie(Mapping[str, Any]):
         return self._instances_by_name[item]
 
     def __setitem__(self, key, value):
+        self._instances_by_name = self._instances_by_name_stack.peek()
+
         if key in self._instances_by_name:
             raise JunkieError(f'Instance for "{key}" already exists')
         if key in self._context:
@@ -50,6 +52,8 @@ class Junkie(Mapping[str, Any]):
         return self._instances_by_name.__iter__()
 
     def __contains__(self, item) -> bool:
+        self._instances_by_name = self._instances_by_name_stack.peek()
+
         return self._instances_by_name.__contains__(item)
 
     @contextmanager
@@ -58,15 +62,12 @@ class Junkie(Mapping[str, Any]):
 
         with ExitStack() as self._exit_stack:
             self._instances_by_name = self._instances_by_name_stack.peek().copy()
-            self._instances_by_name_stack.push(self._instances_by_name)
 
-            if len(names_and_factories) == 1:
-                yield self._build_instance(names_and_factories[0])
-            else:
-                yield self._build_tuple(*names_and_factories)
-
-            self._instances_by_name_stack.pop()
-            self._instances_by_name = self._instances_by_name_stack.peek()
+            with self._instances_by_name_stack.push_temporarily(self._instances_by_name):
+                if len(names_and_factories) == 1:
+                    yield self._build_instance(names_and_factories[0])
+                else:
+                    yield self._build_tuple(*names_and_factories)
 
     def _build_tuple(self, *names_and_factories: Union[str, Callable]) -> Tuple[Any, ...]:
         instances = []

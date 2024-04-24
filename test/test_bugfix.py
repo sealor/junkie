@@ -38,3 +38,16 @@ class BugfixTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             with my_junkie.inject(faulty_handler):
                 pass
+
+    def test_instances_after_exception(self):
+        def faulty_handler():
+            raise ValueError()
+
+        obj = object()
+        my_junkie = Junkie({"object": lambda: obj})
+
+        with self.assertRaises(ValueError):
+            with my_junkie.inject("object", faulty_handler):
+                pass
+
+        self.assertNotIn("object", my_junkie)
