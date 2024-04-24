@@ -24,3 +24,17 @@ class BugfixTest(unittest.TestCase):
                 pass
 
         self.assertRegex(str(log.output), r"DEBUG:junkie:mock = <Mock id='\d+'>\(\)")
+
+    def test_dependency_cycle_check_after_exception(self):
+        def faulty_handler():
+            raise ValueError()
+
+        my_junkie = Junkie()
+
+        with self.assertRaises(ValueError):
+            with my_junkie.inject(faulty_handler):
+                pass
+
+        with self.assertRaises(ValueError):
+            with my_junkie.inject(faulty_handler):
+                pass

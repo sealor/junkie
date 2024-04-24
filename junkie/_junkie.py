@@ -29,7 +29,6 @@ class Junkie(Mapping[str, Any]):
         self._instances_by_name_stack.push(self._instances_by_name)
 
         self._instantiation_stack: Junkie._InstantiationStack = Junkie._InstantiationStack()
-        self._cycle_detection_instance_set = set()
 
         self._context["_junkie"] = self
 
@@ -110,15 +109,21 @@ class Junkie(Mapping[str, Any]):
                 + f'Mapping for "{instance_name}" of builtin type "{get_factory_name(factory_function)}" is missing'
             )
 
-        if factory_function in self._cycle_detection_instance_set:
+        if factory_function in self._instantiation_stack:
             raise JunkieError(
                 f"{self._instantiation_stack}"
                 + f'Dependency cycle detected with "{get_factory_name(factory_function)}()"'
             )
 
-        self._cycle_detection_instance_set.add(factory_function)
-        self._instantiation_stack.push(factory_function)
+        with self._instantiation_stack.push_temporarily(factory_function):
+            instance = self._call_factory_function(factory_function, instance_name)
 
+            if instance_name is not None:
+                self._instances_by_name[instance_name] = instance
+
+            return instance
+
+    def _call_factory_function(self, factory_function, instance_name):
         positional_params, args, keyword_params, kwargs = self._build_parameters(factory_function)
 
         if LOGGER.isEnabledFor(logging.DEBUG):
@@ -133,12 +138,6 @@ class Junkie(Mapping[str, Any]):
                 self._exit_stack.push(lambda *exception_details: LOGGER.debug("%s.__exit__()", instance_name or "_"))
 
             instance = self._exit_stack.enter_context(instance)
-
-        if instance_name is not None:
-            self._instances_by_name[instance_name] = instance
-
-        self._instantiation_stack.pop()
-        self._cycle_detection_instance_set.remove(factory_function)
 
         return instance
 
@@ -229,8 +228,19 @@ class Junkie(Mapping[str, Any]):
         def peek(self):
             return self._stack[-1]
 
+        @contextmanager
+        def push_temporarily(self, item):
+            self.push(item)
+            try:
+                yield self
+            finally:
+                self.pop()
+
         def __len__(self):
             return self._stack.__len__()
+
+        def __contains__(self, item):
+            return item in self._stack
 
     class _InstantiationStack(_Stack):
         def __str__(self):
