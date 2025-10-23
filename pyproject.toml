@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "junkie"
+version = "3.0.2"
+description = "A dependency injection library for beginners and professionals"
+readme = "README.md"
+requires-python = ">=3.6"
+license = {text = "MIT License"}
+authors = [
+    {name = "Stefan Richter"},
+    {name = "Erik Tuerke"},
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/sealor/junkie"
+
+[tool.setuptools.packages.find]
+exclude = ["test*"]
