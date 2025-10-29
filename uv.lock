@@ -1,0 +1,8 @@
+version = 1
+revision = 3
+requires-python = ">=3.6"
+
+[[package]]
+name = "junkie"
+version = "3.0.2"
+source = { editable = "." }
